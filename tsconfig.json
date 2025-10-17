@@ -1,0 +1,22 @@
+{
+  "compilerOptions": {
+    "strict": true,
+    "target": "esnext",
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "downlevelIteration": true,
+    "baseUrl": ".",
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "verbatimModuleSyntax": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": false,
+    "incremental": true,
+    "noErrorTruncation": true,
+    "rootDir": "./src",
+    "outDir": "./dist",
+    "lib": ["esnext", "dom", "dom.iterable"],
+    "types": ["node"]
+  },
+  "include": ["src"]
+}
