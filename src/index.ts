@@ -18,6 +18,8 @@ import { GenidMethod } from './types'
  * - 优雅处理时钟回拨，不阻塞生成
  * - 可配置的位长度，灵活性高
  * - 支持传统和漂移两种生成方法
+ *
+ * ⚠️ 注意：此实例不是线程安全的，每个 Worker/进程应该创建独立的实例并使用不同的 workerId
  */
 export class GenidOptimized {
   private method!: bigint
@@ -99,7 +101,7 @@ export class GenidOptimized {
       baseTime:
         options.baseTime && options.baseTime > 0
           ? options.baseTime
-          : new Date('2025-01-01').valueOf(),
+          : new Date('2020-01-01').valueOf(),
       workerIdBitLength:
         options.workerIdBitLength && options.workerIdBitLength > 0
           ? options.workerIdBitLength
@@ -213,7 +215,18 @@ export class GenidOptimized {
    */
   private _getNextTimeTick(): bigint {
     let timeTick = this._getCurrentTimeTick()
+    let spinCount = 0
+    const maxSpinCount = 1000000 // 防止死循环的最大自旋次数
+
     while (timeTick <= this._lastTimeTick) {
+      spinCount++
+      if (spinCount > maxSpinCount) {
+        /**
+         * 如果自旋太多次，强制返回当前时间 + 1
+         * 这种情况理论上不应该发生，除非系统时间出现严重问题
+         */
+        return this._lastTimeTick + 1n
+      }
       timeTick = this._getCurrentTimeTick()
     }
     return timeTick
@@ -250,6 +263,7 @@ export class GenidOptimized {
       BigInt(this._turnBackIndex)
 
     this._turnBackTimeTick--
+    this._stats.totalGenerated++
     return result
   }
 
@@ -261,9 +275,21 @@ export class GenidOptimized {
   private _nextOverCostId(): bigint {
     const currentTimeTick = this._getCurrentTimeTick()
 
-    // 时间前进，重置状态
+    // 时间前进，重置状态 - 但要先用完当前序列号
     if (currentTimeTick > this._lastTimeTick) {
       this._endOverCostAction(currentTimeTick)
+
+      // 如果当前序列号还在有效范围内，先用完它
+      if (this._currentSeqNumber <= this.maxSeqNumber) {
+        const result = this._calcId(this._lastTimeTick)
+        // 用完后再更新到新时间
+        this._lastTimeTick = currentTimeTick
+        this._currentSeqNumber = this.minSeqNumber
+        this._isOverCost = false
+        this._overCostCountInOneTerm = 0n
+        return result
+      }
+
       this._lastTimeTick = currentTimeTick
       this._currentSeqNumber = this.minSeqNumber
       this._isOverCost = false
@@ -281,7 +307,7 @@ export class GenidOptimized {
       return this._calcId(this._lastTimeTick)
     }
 
-    // 序列号溢出，增加时间戳
+    // 序列号溢出
     if (this._currentSeqNumber > this.maxSeqNumber) {
       this._lastTimeTick++
       this._currentSeqNumber = this.minSeqNumber
@@ -307,9 +333,14 @@ export class GenidOptimized {
         this._turnBackTimeTick = this._lastTimeTick - 1n
         this._turnBackIndex++
 
-        // 使用保留的序列号 1-4 处理回拨(循环使用)
+        // fix：如果回拨索引超过保留范围(1-4)，等待时间追上而不是循环
         if (this._turnBackIndex > 4) {
-          this._turnBackIndex = 1
+          // 等待时间追上
+          this._lastTimeTick = this._getNextTimeTick()
+          this._turnBackIndex = 0
+          this._turnBackTimeTick = 0n
+          this._currentSeqNumber = this.minSeqNumber
+          return this._calcId(this._lastTimeTick)
         }
 
         this._beginTurnBackAction(this._turnBackTimeTick)
@@ -323,6 +354,7 @@ export class GenidOptimized {
     if (this._turnBackTimeTick > 0) {
       this._endTurnBackAction(this._turnBackTimeTick)
       this._turnBackTimeTick = 0n
+      this._turnBackIndex = 0 // 重置回拨索引
     }
 
     // 时间前进
@@ -332,7 +364,9 @@ export class GenidOptimized {
       return this._calcId(this._lastTimeTick)
     }
 
-    // 同一毫秒内序列号溢出
+    // 同一毫秒内序列号溢出，使用 > 判断，因为 _calcId 会先使用当前值再自增
+    // 当 _currentSeqNumber = maxSeqNumber 时，还可以使用一次
+    // 当 _currentSeqNumber = maxSeqNumber + 1 时才需要进位
     if (this._currentSeqNumber > this.maxSeqNumber) {
       this._beginOverCostAction(currentTimeTick)
       this._lastTimeTick++
