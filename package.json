@@ -2,10 +2,27 @@
   "name": "@cdlab996/genid",
   "type": "module",
   "version": "1.0.0",
-  "description": "",
+  "description": "基于 Snowflake 算法的高性能分布式唯一 ID 生成器",
   "author": "wudi <wuchendi96@gmail.com>",
   "license": "MIT",
   "homepage": "https://github.com/WuChenDi",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/WuChenDi/genid.git"
+  },
+  "bugs": {
+    "url": "https://github.com/WuChenDi/genid/issues"
+  },
+  "keywords": [
+    "snowflake",
+    "id-generator",
+    "distributed-id",
+    "unique-id",
+    "genid",
+    "uuid",
+    "uid",
+    "typescript"
+  ],
   "exports": {
     ".": {
       "require": {
@@ -20,6 +37,15 @@
   },
   "main": "./dist/index.js",
   "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "build": "tsdown",
     "dev": "tsdown --watch",
