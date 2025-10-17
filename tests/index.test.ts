@@ -16,8 +16,6 @@ describe('GenidOptimized', () => {
     })
 
     it('应该在 workerIdBitLength 无效时抛出错误', () => {
-      // workerIdBitLength 为 0 时会使用默认值 6，不会抛出错误
-      // 只有明确设置为超出范围的值才会抛出错误
       expect(() => new GenidOptimized({ workerId: 1, workerIdBitLength: 16 })).toThrow(
         '[GenidOptimized] workerIdBitLength 必须在 1 到 15 之间'
       )
@@ -81,6 +79,10 @@ describe('GenidOptimized', () => {
       expect(config.workerId).toBe(1)
       expect(config.workerIdBits).toBe(6)
       expect(config.sequenceBits).toBe(6)
+      // 验证 baseTime 默认为 2020-01-01
+      expect(config.baseTime.getFullYear()).toBe(2020)
+      expect(config.baseTime.getMonth()).toBe(0)
+      expect(config.baseTime.getDate()).toBe(1)
     })
 
     it('应该支持自定义配置', () => {
@@ -145,27 +147,22 @@ describe('GenidOptimized', () => {
       }
     })
 
-    it('应该在 ID 超出安全整数范围时抛出错误（nextNumber）', () => {
-      // 创建一个配置，使 ID 快速超出安全范围
+    it('应该正确处理序列号边界（不会使用 maxSeqNumber + 1）', () => {
       const genid = new GenidOptimized({
         workerId: 1,
-        baseTime: 0, // 使用很早的基准时间
-        workerIdBitLength: 6,
-        seqBitLength: 6,
+        seqBitLength: 3, // 最大序列号为 7
+        minSeqNumber: 5, // 序列号范围 5-7，只有 3 个可用
       })
 
-      // 模拟生成大量 ID 或等待足够长时间
-      // 由于时间戳占用高位，实际中很难快速触发
-      // 这里主要测试边界检查逻辑存在
-      expect(() => {
-        // 直接测试大数值
-        const largeId = 9007199254740993n // 超过安全整数
-        if (largeId >= 9007199254740992n) {
-          throw new Error(
-            `[GenidOptimized] 生成的 ID ${largeId.toString()} 超出 JavaScript 安全整数范围 (9007199254740992)。请使用 nextBigId() 方法。`
-          )
-        }
-      }).toThrow('超出 JavaScript 安全整数范围')
+      // 生成足够多的 ID 以确保触发序列号重置
+      const ids = genid.nextBatch(10)
+
+      // 解析所有 ID，验证序列号都在有效范围内
+      ids.forEach((id) => {
+        const parsed = genid.parse(id)
+        expect(parsed.sequence).toBeGreaterThanOrEqual(0)
+        expect(parsed.sequence).toBeLessThanOrEqual(7)
+      })
     })
   })
 
@@ -302,9 +299,6 @@ describe('GenidOptimized', () => {
       }
 
       const stats = genid.getStats()
-
-      // 因为生成速度很快，avgPerSecond 可能为 0（如果在 1ms 内完成）
-      // 改为检查已生成的数量
       expect(stats.totalGenerated).toBe(1000)
       expect(stats.avgPerSecond).toBeGreaterThanOrEqual(0)
     })
@@ -469,7 +463,7 @@ describe('GenidOptimized', () => {
 
       const ids1 = genid1.nextBatch(100)
 
-      // 等待至少 1ms 以确保时间戳不同
+      // 等待至少 2ms 以确保时间戳不同
       await new Promise((resolve) => setTimeout(resolve, 2))
 
       const ids2 = genid2.nextBatch(100)
@@ -525,22 +519,6 @@ describe('GenidOptimized', () => {
     })
   })
 
-  describe('时钟回拨模拟', () => {
-    it('应该能够处理轻微的时钟回拨', () => {
-      const genid = new GenidOptimized({ workerId: 1 })
-
-      // 正常生成一些 ID
-      const normalIds = genid.nextBatch(10)
-
-      // 由于我们无法直接控制系统时间，这里主要测试逻辑存在
-      // 实际的时钟回拨测试需要 mock Date.now()
-      expect(normalIds).toHaveLength(10)
-
-      const stats = genid.getStats()
-      expect(stats.turnBackCount).toBeGreaterThanOrEqual(0)
-    })
-  })
-
   describe('性能基准测试', () => {
     it('应该能够每秒生成大量 ID', () => {
       const genid = new GenidOptimized({ workerId: 1 })
@@ -553,8 +531,37 @@ describe('GenidOptimized', () => {
       const duration = endTime - startTime
       const idsPerSecond = (count / duration) * 1000
 
-      // 应该能够达到至少 10万/秒的性能
+      // 应该能够达到至少 5万/秒的性能
       expect(idsPerSecond).toBeGreaterThan(50000)
+    })
+
+    it('应该在极限并发下保持唯一性', () => {
+      const genid = new GenidOptimized({
+        workerId: 1,
+        seqBitLength: 10,
+      })
+
+      const count = 1000
+      const ids = genid.nextBatch(count, true)
+
+      // 验证唯一性
+      const uniqueIds = new Set(ids.map((id) => id.toString()))
+      expect(uniqueIds.size).toBe(count)
+
+      // 验证递增性
+      for (let i = 1; i < ids.length; i++) {
+        const prev = BigInt(ids[i - 1])
+        const curr = BigInt(ids[i])
+        if (curr <= prev) {
+          console.log(`发现重复/倒序 ID:`)
+          console.log(`  索引 ${i-1}: ${prev} (${ids[i-1]})`)
+          console.log(`  索引 ${i}: ${curr} (${ids[i]})`)
+          console.log(`  解析 [${i-1}]:`, genid.parse(ids[i-1]))
+          console.log(`  解析 [${i}]:`, genid.parse(ids[i]))
+        }
+        expect(curr).toBeGreaterThan(prev)
+        // expect(ids[i]).toBeGreaterThan(ids[i - 1])
+      }
     })
   })
 })
