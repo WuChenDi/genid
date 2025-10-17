@@ -47,12 +47,6 @@ graph TB
     
     Q --> R[更新统计]
     R --> S[返回 ID]
-    
-    style B fill:#fff4e6
-    style E fill:#e8f5e9
-    style K fill:#fce4ec
-    style Q fill:#f3e5f5
-    style S fill:#c8e6c9
 ```
 
 ### ID 结构（64-bit）
