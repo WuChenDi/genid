@@ -50,7 +50,9 @@
     "build": "tsdown",
     "dev": "tsdown --watch",
     "test": "vitest --run",
-    "test:watch": "vitest",
+    "test:index": "vitest --run tests/index.test.ts",
+    "test:performance": "vitest --run tests/performance.test.ts",
+    "test:stress": "vitest --run tests/stress.test.ts",
     "typecheck": "tsc --project tsconfig.json"
   },
   "devDependencies": {
