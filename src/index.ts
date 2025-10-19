@@ -262,7 +262,8 @@ export class GenidOptimized {
       (this.workerId << this.seqBitLength) +
       BigInt(this._turnBackIndex)
 
-    this._turnBackTimeTick--
+    // this._turnBackTimeTick--
+    this._turnBackTimeTick++
     this._stats.totalGenerated++
     return result
   }
