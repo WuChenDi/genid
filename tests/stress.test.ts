@@ -429,6 +429,9 @@ describe('GenidOptimized - 压力测试', () => {
         const duration = performance.now() - startTime
 
         const uniqueIds = new Set(ids.map((id) => id.toString()))
+        if (ids[0] === undefined) {
+          throw new Error('[GenidOptimized] 边界值测试失败')
+        }
         const parsed = genid.parse(ids[0])
 
         console.log(

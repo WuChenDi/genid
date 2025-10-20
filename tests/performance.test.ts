@@ -112,11 +112,11 @@ describe('GenidOptimized - 性能测试', () => {
 
       console.log(`\n=== 延迟分布 (${iterations.toLocaleString()} 次测试) ===`)
       console.log(`平均延迟: ${avg.toFixed(4)}ms`)
-      console.log(`P50 延迟: ${p50.toFixed(4)}ms`)
-      console.log(`P95 延迟: ${p95.toFixed(4)}ms`)
-      console.log(`P99 延迟: ${p99.toFixed(4)}ms`)
-      console.log(`P99.9 延迟: ${p999.toFixed(4)}ms`)
-      console.log(`最大延迟: ${max.toFixed(4)}ms`)
+      console.log(`P50 延迟: ${p50?.toFixed(4)}ms`)
+      console.log(`P95 延迟: ${p95?.toFixed(4)}ms`)
+      console.log(`P99 延迟: ${p99?.toFixed(4)}ms`)
+      console.log(`P99.9 延迟: ${p999?.toFixed(4)}ms`)
+      console.log(`最大延迟: ${max?.toFixed(4)}ms`)
 
       // P99 延迟应该小于 0.1ms
       expect(p99).toBeLessThan(0.1)
