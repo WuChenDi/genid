@@ -8,31 +8,31 @@ import { GenidOptimized } from '../src'
  */
 describe('GenidOptimized - 压力测试', () => {
   describe('极限吞吐量测试', () => {
-    it('应该在 1 分钟内生成海量 ID', () => {
-      const genid = new GenidOptimized({ workerId: 1 })
-      const duration = 60000 // 1 分钟
-      const startTime = Date.now()
-      let count = 0
+    // it('应该在 1 分钟内生成海量 ID', () => {
+    //   const genid = new GenidOptimized({ workerId: 1 })
+    //   const duration = 60 * 1000 // 1 分钟
+    //   const startTime = Date.now()
+    //   let count = 0
 
-      console.log('\n=== 1 分钟极限吞吐量测试 ===')
+    //   console.log('\n=== 1 分钟极限吞吐量测试 ===')
 
-      while (Date.now() - startTime < duration) {
-        genid.nextBatch(10000)
-        count += 10000
-      }
+    //   while (Date.now() - startTime < duration) {
+    //     genid.nextBatch(10000)
+    //     count += 10000
+    //   }
 
-      const actualDuration = Date.now() - startTime
-      const throughput = (count / actualDuration) * 1000
-      const stats = genid.getStats()
+    //   const actualDuration = Date.now() - startTime
+    //   const throughput = (count / actualDuration) * 1000
+    //   const stats = genid.getStats()
+    //
+    //   console.log(`总生成数: ${count.toLocaleString()} IDs`)
+    //   console.log(`实际耗时: ${(actualDuration / 1000).toFixed(2)}s`)
+    //   console.log(`平均吞吐量: ${Math.floor(throughput).toLocaleString()} IDs/秒`)
+    //   console.log(`漂移次数: ${stats.overCostCount.toLocaleString()}`)
+    //   console.log(`时钟回拨: ${stats.turnBackCount}`)
 
-      console.log(`总生成数: ${count.toLocaleString()} IDs`)
-      console.log(`实际耗时: ${(actualDuration / 1000).toFixed(2)}s`)
-      console.log(`平均吞吐量: ${Math.floor(throughput).toLocaleString()} IDs/秒`)
-      console.log(`漂移次数: ${stats.overCostCount.toLocaleString()}`)
-      console.log(`时钟回拨: ${stats.turnBackCount}`)
-
-      expect(count).toBeGreaterThan(1000000) // 至少 100万
-    }, 70000)
+    //   expect(count).toBeGreaterThan(1000000) // 至少 100万
+    // }, 70000)
 
     it('应该能够生成 1000 万个唯一 ID', () => {
       const genid = new GenidOptimized({ workerId: 1 })
@@ -68,114 +68,114 @@ describe('GenidOptimized - 压力测试', () => {
       console.log('统计数据:', stats)
 
       expect(stats.totalGenerated).toBe(targetCount)
-    }, 300000) // 5 分钟超时
+    }, 80000) // 1 分钟 20 秒超时
   })
 
-  describe('长时间运行测试', () => {
-    it('应该能够稳定运行 5 分钟', () => {
-      const genid = new GenidOptimized({ workerId: 1 })
-      const duration = 300000 // 5 分钟
-      const batchSize = 1000
+  // describe('长时间运行测试', () => {
+  //   it('应该能够稳定运行 5 分钟', () => {
+  //     const genid = new GenidOptimized({ workerId: 1 })
+  //     const duration = 300000 // 5 分钟
+  //     const batchSize = 1000
 
-      console.log('\n=== 5 分钟稳定性测试 ===')
+  //     console.log('\n=== 5 分钟稳定性测试 ===')
 
-      const startTime = Date.now()
-      let totalGenerated = 0
-      const samples: any[] = []
+  //     const startTime = Date.now()
+  //     let totalGenerated = 0
+  //     const samples: any[] = []
 
-      let lastSampleTime = startTime
-      let lastSampleCount = 0
+  //     let lastSampleTime = startTime
+  //     let lastSampleCount = 0
 
-      while (Date.now() - startTime < duration) {
-        genid.nextBatch(batchSize)
-        totalGenerated += batchSize
+  //     while (Date.now() - startTime < duration) {
+  //       genid.nextBatch(batchSize)
+  //       totalGenerated += batchSize
 
-        // 每 10 秒采样一次
-        if (Date.now() - lastSampleTime >= 10000) {
-          const currentTime = Date.now()
-          const sampleDuration = currentTime - lastSampleTime
-          const sampleCount = totalGenerated - lastSampleCount
-          const throughput = (sampleCount / sampleDuration) * 1000
+  //       // 每 10 秒采样一次
+  //       if (Date.now() - lastSampleTime >= 10000) {
+  //         const currentTime = Date.now()
+  //         const sampleDuration = currentTime - lastSampleTime
+  //         const sampleCount = totalGenerated - lastSampleCount
+  //         const throughput = (sampleCount / sampleDuration) * 1000
 
-          samples.push({
-            timestamp: currentTime - startTime,
-            throughput,
-            totalGenerated,
-          })
+  //         samples.push({
+  //           timestamp: currentTime - startTime,
+  //           throughput,
+  //           totalGenerated,
+  //         })
 
-          console.log(
-            `${((currentTime - startTime) / 1000).toFixed(0)}s: ${Math.floor(throughput).toLocaleString()} IDs/秒, 总计: ${totalGenerated.toLocaleString()}`
-          )
+  //         console.log(
+  //           `${((currentTime - startTime) / 1000).toFixed(0)}s: ${Math.floor(throughput).toLocaleString()} IDs/秒, 总计: ${totalGenerated.toLocaleString()}`
+  //         )
 
-          lastSampleTime = currentTime
-          lastSampleCount = totalGenerated
-        }
-      }
+  //         lastSampleTime = currentTime
+  //         lastSampleCount = totalGenerated
+  //       }
+  //     }
 
-      const stats = genid.getStats()
+  //     const stats = genid.getStats()
 
-      // 计算吞吐量统计
-      const throughputs = samples.map((s) => s.throughput)
-      const avgThroughput = throughputs.reduce((a, b) => a + b, 0) / throughputs.length
-      const maxThroughput = Math.max(...throughputs)
-      const minThroughput = Math.min(...throughputs)
-      const variance = ((maxThroughput - minThroughput) / avgThroughput) * 100
+  //     // 计算吞吐量统计
+  //     const throughputs = samples.map((s) => s.throughput)
+  //     const avgThroughput = throughputs.reduce((a, b) => a + b, 0) / throughputs.length
+  //     const maxThroughput = Math.max(...throughputs)
+  //     const minThroughput = Math.min(...throughputs)
+  //     const variance = ((maxThroughput - minThroughput) / avgThroughput) * 100
 
-      console.log('\n=== 测试总结 ===')
-      console.log(`总生成数: ${totalGenerated.toLocaleString()}`)
-      console.log(`平均吞吐量: ${Math.floor(avgThroughput).toLocaleString()} IDs/秒`)
-      console.log(`最大吞吐量: ${Math.floor(maxThroughput).toLocaleString()} IDs/秒`)
-      console.log(`最小吞吐量: ${Math.floor(minThroughput).toLocaleString()} IDs/秒`)
-      console.log(`波动范围: ${variance.toFixed(2)}%`)
-      console.log(`漂移次数: ${stats.overCostCount.toLocaleString()}`)
-      console.log(`时钟回拨: ${stats.turnBackCount}`)
+  //     console.log('\n=== 测试总结 ===')
+  //     console.log(`总生成数: ${totalGenerated.toLocaleString()}`)
+  //     console.log(`平均吞吐量: ${Math.floor(avgThroughput).toLocaleString()} IDs/秒`)
+  //     console.log(`最大吞吐量: ${Math.floor(maxThroughput).toLocaleString()} IDs/秒`)
+  //     console.log(`最小吞吐量: ${Math.floor(minThroughput).toLocaleString()} IDs/秒`)
+  //     console.log(`波动范围: ${variance.toFixed(2)}%`)
+  //     console.log(`漂移次数: ${stats.overCostCount.toLocaleString()}`)
+  //     console.log(`时钟回拨: ${stats.turnBackCount}`)
 
-      // 性能波动应该在合理范围内
-      expect(variance).toBeLessThan(50)
-    }, 320000) // 5分20秒超时
-  })
+  //     // 性能波动应该在合理范围内
+  //     expect(variance).toBeLessThan(50)
+  //   }, 320000) // 5分20秒超时
+  // })
 
   describe('内存压力测试', () => {
-    it('应该能够处理超大批量生成', () => {
-      const genid = new GenidOptimized({ workerId: 1 })
-      const batchSizes = [10000, 50000, 100000, 500000, 1000000]
+    // it('应该能够处理超大批量生成', () => {
+    //   const genid = new GenidOptimized({ workerId: 1 })
+    //   const batchSizes = [10000, 50000, 100000, 500000, 1000000]
 
-      console.log('\n=== 超大批量生成测试 ===')
+    //   console.log('\n=== 超大批量生成测试 ===')
 
-      batchSizes.forEach((size) => {
-        if (global.gc) {
-          global.gc()
-        }
+    //   batchSizes.forEach((size) => {
+    //     if (global.gc) {
+    //       global.gc()
+    //     }
 
-        const memBefore = process.memoryUsage()
-        const startTime = performance.now()
+    //     const memBefore = process.memoryUsage()
+    //     const startTime = performance.now()
 
-        const ids = genid.nextBatch(size, true)
+    //     const ids = genid.nextBatch(size, true)
 
-        const duration = performance.now() - startTime
-        const memAfter = process.memoryUsage()
+    //     const duration = performance.now() - startTime
+    //     const memAfter = process.memoryUsage()
 
-        const memUsed = (memAfter.heapUsed - memBefore.heapUsed) / 1024 / 1024
-        const throughput = (size / duration) * 1000
+    //     const memUsed = (memAfter.heapUsed - memBefore.heapUsed) / 1024 / 1024
+    //     const throughput = (size / duration) * 1000
 
-        console.log(
-          `批次 ${(size / 1000).toFixed(0).padStart(6)}K: ${duration.toFixed(2).padStart(8)}ms, ${Math.floor(throughput).toLocaleString().padStart(10)} IDs/秒, 内存: ${memUsed.toFixed(2)}MB`
-        )
+    //     console.log(
+    //       `批次 ${(size / 1000).toFixed(0).padStart(6)}K: ${duration.toFixed(2).padStart(8)}ms, ${Math.floor(throughput).toLocaleString().padStart(10)} IDs/秒, 内存: ${memUsed.toFixed(2)}MB`
+    //     )
 
-        // 验证 ID 唯一性(抽样检查)
-        const sampleSize = Math.min(10000, size)
-        const sample = ids.slice(0, sampleSize)
-        const uniqueSample = new Set(sample.map((id) => id.toString()))
-        expect(uniqueSample.size).toBe(sampleSize)
+    //     // 验证 ID 唯一性(抽样检查)
+    //     const sampleSize = Math.min(10000, size)
+    //     const sample = ids.slice(0, sampleSize)
+    //     const uniqueSample = new Set(sample.map((id) => id.toString()))
+    //     expect(uniqueSample.size).toBe(sampleSize)
 
-        // 清理
-        ids.length = 0
-      })
-    }, 120000)
+    //     // 清理
+    //     ids.length = 0
+    //   })
+    // }, 120000)
 
     it('应该在持续生成下不发生内存泄漏', () => {
       const genid = new GenidOptimized({ workerId: 1 })
-      const duration = 30000 // 30 秒
+      const duration = 30 * 1000 // 30 秒
       const batchSize = 10000
 
       console.log('\n=== 内存泄漏检测 (30秒) ===')

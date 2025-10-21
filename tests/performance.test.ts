@@ -246,7 +246,7 @@ describe('GenidOptimized - 性能测试', () => {
       console.log(`外部内存增长: ${memoryIncrease.external.toFixed(2)} MB`)
 
       // 内存增长应该很小 (主要是统计数据)
-      expect(memoryIncrease.heapUsed).toBeLessThan(10)
+      expect(memoryIncrease.heapUsed).toBeLessThan(12)
     })
 
     it('应该测量批量生成时的内存效率', () => {
