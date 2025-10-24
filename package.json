@@ -56,10 +56,10 @@
     "typecheck": "tsc --project tsconfig.json"
   },
   "devDependencies": {
-    "@types/node": "^22",
-    "tsdown": "^0.15.7",
+    "@types/node": "^24",
+    "tsdown": "^0.15.9",
     "typescript": "^5.9.3",
-    "vitest": "^3.2.4"
+    "vitest": "^4.0.2"
   },
   "publishConfig": {
     "access": "public",
