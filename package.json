@@ -1,7 +1,7 @@
 {
   "name": "@cdlab996/genid",
   "type": "module",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "基于 Snowflake 算法的高性能分布式唯一 ID 生成器",
   "author": "wudi <wuchendi96@gmail.com>",
   "license": "MIT",
