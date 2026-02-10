@@ -107,7 +107,9 @@ export class GenidOptimized {
           ? options.workerIdBitLength
           : 6,
       seqBitLength:
-        options.seqBitLength && options.seqBitLength > 0 ? options.seqBitLength : 6,
+        options.seqBitLength && options.seqBitLength > 0
+          ? options.seqBitLength
+          : 6,
       maxSeqNumber: 0,
       minSeqNumber: 0,
       topOverCostCount: 0,
@@ -121,7 +123,9 @@ export class GenidOptimized {
 
     // 设置最小序列号(0-4 保留用于时钟回拨)
     config.minSeqNumber =
-      options.minSeqNumber && options.minSeqNumber > 0 ? options.minSeqNumber : 5
+      options.minSeqNumber && options.minSeqNumber > 0
+        ? options.minSeqNumber
+        : 5
 
     // 设置最大漂移次数
     config.topOverCostCount =
@@ -139,8 +143,13 @@ export class GenidOptimized {
    * @throws {Error} 如果配置无效
    */
   private _validateConfig(config: GenidConfig): void {
-    const { workerId, workerIdBitLength, seqBitLength, minSeqNumber, maxSeqNumber } =
-      config
+    const {
+      workerId,
+      workerIdBitLength,
+      seqBitLength,
+      minSeqNumber,
+      maxSeqNumber,
+    } = config
 
     // 验证位长度
     if (workerIdBitLength < 1 || workerIdBitLength > 15) {
@@ -152,13 +161,17 @@ export class GenidOptimized {
     }
 
     if (workerIdBitLength + seqBitLength > 22) {
-      throw new Error('[GenidOptimized] workerIdBitLength + seqBitLength 不能超过 22')
+      throw new Error(
+        '[GenidOptimized] workerIdBitLength + seqBitLength 不能超过 22',
+      )
     }
 
     // 验证工作节点 ID
     const maxWorkerId = (1 << workerIdBitLength) - 1
     if (workerId < 0 || workerId > maxWorkerId) {
-      throw new Error(`[GenidOptimized] workerId 必须在 0 到 ${maxWorkerId} 之间`)
+      throw new Error(
+        `[GenidOptimized] workerId 必须在 0 到 ${maxWorkerId} 之间`,
+      )
     }
 
     // 验证序列号范围
@@ -167,7 +180,9 @@ export class GenidOptimized {
     }
 
     if (maxSeqNumber < minSeqNumber) {
-      throw new Error('[GenidOptimized] maxSeqNumber 必须大于或等于 minSeqNumber')
+      throw new Error(
+        '[GenidOptimized] maxSeqNumber 必须大于或等于 minSeqNumber',
+      )
     }
   }
 
@@ -433,7 +448,7 @@ export class GenidOptimized {
     // JavaScript 安全整数范围：-(2^53-1) 到 2^53-1
     if (id >= 9007199254740992n) {
       throw new Error(
-        `[GenidOptimized] 生成的 ID ${id.toString()} 超出 JavaScript 安全整数范围 (9007199254740992)。请使用 nextBigId() 方法。`
+        `[GenidOptimized] 生成的 ID ${id.toString()} 超出 JavaScript 安全整数范围 (9007199254740992)。请使用 nextBigId() 方法。`,
       )
     }
 
@@ -556,7 +571,8 @@ export class GenidOptimized {
       overCostCount: Number(this._stats.overCostCount), // 漂移次数
       turnBackCount: Number(this._stats.turnBackCount), // 时钟回拨次数
       uptimeMs: uptime, // 运行时间(毫秒)
-      avgPerSecond: uptime > 0 ? Math.floor((totalGenerated / uptime) * 1000) : 0, // 每秒平均生成数量
+      avgPerSecond:
+        uptime > 0 ? Math.floor((totalGenerated / uptime) * 1000) : 0, // 每秒平均生成数量
       currentState: this._isOverCost ? 'OVER_COST' : 'NORMAL', // 当前状态
     }
   }
@@ -584,7 +600,8 @@ export class GenidOptimized {
     const idsPerMs = Number(this.maxSeqNumber - this.minSeqNumber + 1n)
 
     return {
-      method: Number(this.method) === GenidMethod.DRIFT ? 'DRIFT' : 'TRADITIONAL', // 算法类型
+      method:
+        Number(this.method) === GenidMethod.DRIFT ? 'DRIFT' : 'TRADITIONAL', // 算法类型
       workerId: Number(this.workerId), // 当前工作节点 ID
       workerIdRange: `0-${maxWorkerId}`, // 工作节点 ID 范围
       sequenceRange: `${Number(this.minSeqNumber)}-${Number(this.maxSeqNumber)}`, // 序列号范围
@@ -613,7 +630,8 @@ export class GenidOptimized {
     const binary = idBigInt.toString(2).padStart(64, '0')
     const parsed = this.parse(id)
 
-    const timestampBits = 64 - Number(this.workerIdBitLength + this.seqBitLength)
+    const timestampBits =
+      64 - Number(this.workerIdBitLength + this.seqBitLength)
     const workerIdStart = timestampBits
     const seqStart = workerIdStart + Number(this.workerIdBitLength)
 

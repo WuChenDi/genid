@@ -48,6 +48,7 @@
   },
   "scripts": {
     "build": "tsdown",
+    "clean": "bash ./scripts/clean.sh",
     "dev": "tsdown --watch",
     "test": "vitest --run",
     "test:index": "vitest --run tests/index.test.ts",
@@ -56,10 +57,11 @@
     "typecheck": "tsc --project tsconfig.json"
   },
   "devDependencies": {
-    "@types/node": "^24",
-    "tsdown": "^0.15.9",
-    "typescript": "^5.9.3",
-    "vitest": "^4.0.2"
+    "@biomejs/biome": "^2.3.14",
+    "@types/node": "^25",
+    "tsdown": "^0.20.3",
+    "typescript": "^5",
+    "vitest": "^4.0.18"
   },
   "publishConfig": {
     "access": "public",
