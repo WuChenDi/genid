@@ -48,12 +48,14 @@
   },
   "scripts": {
     "build": "tsdown",
-    "clean": "bash ./scripts/clean.sh",
     "dev": "tsdown --watch",
     "test": "vitest --run",
     "test:index": "vitest --run tests/index.test.ts",
     "test:performance": "vitest --run tests/performance.test.ts",
     "test:stress": "vitest --run tests/stress.test.ts",
+    "lint": "biome check",
+    "format": "biome format --write",
+    "clean": "bash ./scripts/clean.sh",
     "typecheck": "tsc --project tsconfig.json"
   },
   "devDependencies": {
