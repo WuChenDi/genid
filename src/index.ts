@@ -615,6 +615,84 @@ export class GenidOptimized {
   }
 
   /**
+   * 验证 ID 是否为有效的 Snowflake ID
+   *
+   * @param {number|bigint|string} id - 要验证的 ID
+   * @param {boolean} [strictWorkerId=false] - 是否严格验证 workerId 必须匹配当前实例
+   * @returns {boolean} ID 是否有效
+   *
+   * @example
+   * const genid = new GenidOptimized({ workerId: 1 });
+   * const id = genid.nextId();
+   * genid.isValid(id); // true
+   * genid.isValid(12345); // false
+   * genid.isValid(id, true); // true (workerId 匹配)
+   */
+  isValid(
+    id: number | bigint | string,
+    strictWorkerId: boolean = false,
+  ): boolean {
+    try {
+      const idBigInt = BigInt(id)
+
+      // 1. 检查 ID 是否为正数
+      if (idBigInt < 0n) {
+        return false
+      }
+
+      // 2. 检查 ID 是否超出 64 位范围
+      if (idBigInt >= 18446744073709551616n) {
+        // 2^64
+        return false
+      }
+
+      // 3. 解析 ID 并验证各组件
+      const timestampTick = idBigInt >> this._timestampShift
+      const timestamp = timestampTick + this.baseTime
+
+      const workerIdMask = (1n << this.workerIdBitLength) - 1n
+      const workerId = (idBigInt >> this.seqBitLength) & workerIdMask
+
+      const seqMask = (1n << this.seqBitLength) - 1n
+      const sequence = idBigInt & seqMask
+
+      // 4. 验证时间戳是否在合理范围内
+      // 时间戳不能小于 baseTime
+      if (timestamp < this.baseTime) {
+        return false
+      }
+
+      // 时间戳不能超过当前时间太多（允许 1 秒的时钟漂移容差）
+      const currentTime = BigInt(Date.now())
+      if (timestamp > currentTime + 1000n) {
+        return false
+      }
+
+      // 5. 验证 workerId 是否在有效范围内
+      const maxWorkerId = (1n << this.workerIdBitLength) - 1n
+      if (workerId < 0n || workerId > maxWorkerId) {
+        return false
+      }
+
+      // 6. 如果启用严格模式，验证 workerId 是否匹配当前实例
+      if (strictWorkerId && workerId !== this.workerId) {
+        return false
+      }
+
+      // 7. 验证序列号是否在有效范围内
+      const maxSeq = (1n << this.seqBitLength) - 1n
+      if (sequence < 0n || sequence > maxSeq) {
+        return false
+      }
+
+      return true
+    } catch {
+      // 如果转换为 BigInt 失败或其他错误，返回 false
+      return false
+    }
+  }
+
+  /**
    * 将 ID 格式化为二进制字符串以便调试
    *
    * @param {number|bigint|string} id - 要格式化的 ID
