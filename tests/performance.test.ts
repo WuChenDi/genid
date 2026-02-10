@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import { GenidOptimized } from '../src'
 import { GenidMethod } from '../src/types'
 
@@ -72,7 +72,7 @@ describe('GenidOptimized - 性能测试', () => {
         results.push({ size, duration, throughput })
 
         console.log(
-          `批次 ${size.toString().padStart(6)}: ${duration.toFixed(3)}ms, ${Math.floor(throughput).toLocaleString().padStart(10)} IDs/秒`
+          `批次 ${size.toString().padStart(6)}: ${duration.toFixed(3)}ms, ${Math.floor(throughput).toLocaleString().padStart(10)} IDs/秒`,
         )
       })
 
@@ -175,7 +175,8 @@ describe('GenidOptimized - 性能测试', () => {
         if (Date.now() - lastSampleTime >= 1000) {
           const currentCount = totalGenerated
           const throughput =
-            (currentCount - lastSampleCount) / ((Date.now() - lastSampleTime) / 1000)
+            (currentCount - lastSampleCount) /
+            ((Date.now() - lastSampleTime) / 1000)
           throughputSamples.push(throughput)
 
           lastSampleTime = Date.now()
@@ -189,7 +190,9 @@ describe('GenidOptimized - 性能测试', () => {
 
       console.log(`总耗时: ${actualDuration}ms`)
       console.log(`总生成: ${totalGenerated.toLocaleString()} IDs`)
-      console.log(`平均吞吐量: ${Math.floor(avgThroughput).toLocaleString()} IDs/秒`)
+      console.log(
+        `平均吞吐量: ${Math.floor(avgThroughput).toLocaleString()} IDs/秒`,
+      )
       console.log(`漂移次数: ${stats.overCostCount}`)
       console.log(`时钟回拨: ${stats.turnBackCount}`)
 
@@ -199,7 +202,7 @@ describe('GenidOptimized - 性能测试', () => {
         const variance = ((maxThroughput - minThroughput) / avgThroughput) * 100
 
         console.log(
-          `吞吐量波动: ${variance.toFixed(2)}% (最大: ${Math.floor(maxThroughput).toLocaleString()}, 最小: ${Math.floor(minThroughput).toLocaleString()})`
+          `吞吐量波动: ${variance.toFixed(2)}% (最大: ${Math.floor(maxThroughput).toLocaleString()}, 最小: ${Math.floor(minThroughput).toLocaleString()})`,
         )
       }
 
@@ -219,7 +222,9 @@ describe('GenidOptimized - 性能测试', () => {
 
       // 生成大量 ID (不保存到数组中)
       const count = 10000000 // 1000万
-      console.log(`\n=== 内存占用测试 (生成 ${(count / 1000000).toFixed(0)}M IDs) ===`)
+      console.log(
+        `\n=== 内存占用测试 (生成 ${(count / 1000000).toFixed(0)}M IDs) ===`,
+      )
 
       const startTime = Date.now()
       for (let i = 0; i < count; i++) {
@@ -240,7 +245,7 @@ describe('GenidOptimized - 性能测试', () => {
 
       console.log(`生成耗时: ${duration}ms`)
       console.log(
-        `吞吐量: ${Math.floor((count / duration) * 1000).toLocaleString()} IDs/秒`
+        `吞吐量: ${Math.floor((count / duration) * 1000).toLocaleString()} IDs/秒`,
       )
       console.log(`堆内存增长: ${memoryIncrease.heapUsed.toFixed(2)} MB`)
       console.log(`外部内存增长: ${memoryIncrease.external.toFixed(2)} MB`)
@@ -267,7 +272,7 @@ describe('GenidOptimized - 性能测试', () => {
         const memoryPerID = (after - before) / size / 1024 // KB per ID
 
         console.log(
-          `批次 ${size.toString().padStart(6)}: ${memoryPerID.toFixed(3)} KB/ID`
+          `批次 ${size.toString().padStart(6)}: ${memoryPerID.toFixed(3)} KB/ID`,
         )
 
         // 清理数组
@@ -330,14 +335,14 @@ describe('GenidOptimized - 性能测试', () => {
       console.log('漂移算法:')
       console.log(`  生成数量: ${results.drift.count.toLocaleString()}`)
       console.log(
-        `  吞吐量: ${Math.floor(results.drift.throughput).toLocaleString()} IDs/秒`
+        `  吞吐量: ${Math.floor(results.drift.throughput).toLocaleString()} IDs/秒`,
       )
       console.log(`  漂移次数: ${results.drift.overCostCount}`)
 
       console.log('传统算法:')
       console.log(`  生成数量: ${results.traditional.count.toLocaleString()}`)
       console.log(
-        `  吞吐量: ${Math.floor(results.traditional.throughput).toLocaleString()} IDs/秒`
+        `  吞吐量: ${Math.floor(results.traditional.throughput).toLocaleString()} IDs/秒`,
       )
       console.log(`  漂移次数: ${results.traditional.overCostCount}`)
 
@@ -345,7 +350,9 @@ describe('GenidOptimized - 性能测试', () => {
         ((results.drift.throughput - results.traditional.throughput) /
           results.traditional.throughput) *
         100
-      console.log(`性能提升: ${improvement > 0 ? '+' : ''}${improvement.toFixed(2)}%`)
+      console.log(
+        `性能提升: ${improvement > 0 ? '+' : ''}${improvement.toFixed(2)}%`,
+      )
 
       // 两种算法都应该有良好的性能
       expect(results.drift.throughput).toBeGreaterThan(100000)
@@ -375,7 +382,9 @@ describe('GenidOptimized - 性能测试', () => {
       console.log(`耗时: ${duration.toFixed(2)}ms`)
       console.log(`吞吐量: ${Math.floor(throughput).toLocaleString()} IDs/秒`)
       console.log(`漂移次数: ${stats.overCostCount}`)
-      console.log(`漂移率: ${((stats.overCostCount / count) * 100).toFixed(2)}%`)
+      console.log(
+        `漂移率: ${((stats.overCostCount / count) * 100).toFixed(2)}%`,
+      )
 
       // 即使频繁漂移,性能仍应该可接受
       expect(throughput).toBeGreaterThan(50000)
@@ -401,7 +410,7 @@ describe('GenidOptimized - 性能测试', () => {
         const throughput = (testCount / duration) * 1000
 
         console.log(
-          `序列号位数 ${seqBits.toString().padStart(2)}: 吞吐量 ${Math.floor(throughput).toLocaleString().padStart(10)} IDs/秒, 漂移 ${stats.overCostCount}`
+          `序列号位数 ${seqBits.toString().padStart(2)}: 吞吐量 ${Math.floor(throughput).toLocaleString().padStart(10)} IDs/秒, 漂移 ${stats.overCostCount}`,
         )
       })
     })
@@ -418,7 +427,7 @@ describe('GenidOptimized - 性能测试', () => {
 
       const workers = Array.from(
         { length: workerCount },
-        (_, i) => new GenidOptimized({ workerId: i })
+        (_, i) => new GenidOptimized({ workerId: i }),
       )
 
       const startTime = performance.now()
@@ -490,7 +499,7 @@ describe('GenidOptimized - 性能测试', () => {
         const throughput = (count / duration) * 1000
 
         console.log(
-          `${name.padEnd(8)}: ${Math.floor(throughput).toLocaleString().padStart(10)} 次/秒`
+          `${name.padEnd(8)}: ${Math.floor(throughput).toLocaleString().padStart(10)} 次/秒`,
         )
       })
     })
@@ -556,7 +565,9 @@ describe('GenidOptimized - 性能测试', () => {
       const statDuration = performance.now() - statStartTime
 
       console.log('\n=== 统计功能性能影响 ===')
-      console.log(`生成 ${count.toLocaleString()} IDs: ${duration.toFixed(2)}ms`)
+      console.log(
+        `生成 ${count.toLocaleString()} IDs: ${duration.toFixed(2)}ms`,
+      )
       console.log(`获取统计 10000 次: ${statDuration.toFixed(2)}ms`)
       console.log(`单次统计耗时: ${(statDuration / 10000).toFixed(4)}ms`)
 

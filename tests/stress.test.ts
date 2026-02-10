@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import { GenidOptimized } from '../src'
 
 /**
@@ -39,7 +39,9 @@ describe('GenidOptimized - 压力测试', () => {
       const targetCount = 10000000 // 1000万
       const checkInterval = 1000000 // 每 100万 检查一次
 
-      console.log(`\n=== 生成 ${(targetCount / 1000000).toFixed(0)}M 唯一 ID 测试 ===`)
+      console.log(
+        `\n=== 生成 ${(targetCount / 1000000).toFixed(0)}M 唯一 ID 测试 ===`,
+      )
 
       const startTime = Date.now()
       let lastCheckTime = startTime
@@ -52,7 +54,7 @@ describe('GenidOptimized - 压力测试', () => {
         const throughput = (checkInterval / elapsed) * 1000
 
         console.log(
-          `进度: ${(((i + 1) * checkInterval) / 1000000).toFixed(0)}M, 速率: ${Math.floor(throughput).toLocaleString()} IDs/秒`
+          `进度: ${(((i + 1) * checkInterval) / 1000000).toFixed(0)}M, 速率: ${Math.floor(throughput).toLocaleString()} IDs/秒`,
         )
 
         lastCheckTime = now
@@ -63,7 +65,7 @@ describe('GenidOptimized - 压力测试', () => {
 
       console.log(`总耗时: ${(totalDuration / 1000).toFixed(2)}s`)
       console.log(
-        `平均吞吐量: ${Math.floor((targetCount / totalDuration) * 1000).toLocaleString()} IDs/秒`
+        `平均吞吐量: ${Math.floor((targetCount / totalDuration) * 1000).toLocaleString()} IDs/秒`,
       )
       console.log('统计数据:', stats)
 
@@ -204,7 +206,7 @@ describe('GenidOptimized - 压力测试', () => {
           memSamples.push(memUsed)
 
           console.log(
-            `${((Date.now() - startTime) / 1000).toFixed(0)}s: 内存增长 ${memUsed.toFixed(2)}MB`
+            `${((Date.now() - startTime) / 1000).toFixed(0)}s: 内存增长 ${memUsed.toFixed(2)}MB`,
           )
         }
       }
@@ -214,7 +216,8 @@ describe('GenidOptimized - 压力测试', () => {
       }
 
       const finalMemory = process.memoryUsage()
-      const totalMemGrowth = (finalMemory.heapUsed - initialMemory.heapUsed) / 1024 / 1024
+      const totalMemGrowth =
+        (finalMemory.heapUsed - initialMemory.heapUsed) / 1024 / 1024
 
       // 计算内存增长趋势
       const firstHalfAvg =
@@ -223,7 +226,9 @@ describe('GenidOptimized - 压力测试', () => {
           .reduce((a, b) => a + b, 0) /
         (memSamples.length / 2)
       const secondHalfAvg =
-        memSamples.slice(Math.floor(memSamples.length / 2)).reduce((a, b) => a + b, 0) /
+        memSamples
+          .slice(Math.floor(memSamples.length / 2))
+          .reduce((a, b) => a + b, 0) /
         (memSamples.length / 2)
 
       const memGrowthTrend = secondHalfAvg - firstHalfAvg
@@ -247,7 +252,7 @@ describe('GenidOptimized - 压力测试', () => {
 
       const workers = Array.from(
         { length: workerCount },
-        (_, i) => new GenidOptimized({ workerId: i })
+        (_, i) => new GenidOptimized({ workerId: i }),
       )
 
       const startTime = performance.now()
@@ -260,7 +265,7 @@ describe('GenidOptimized - 压力测试', () => {
         const workerDuration = performance.now() - workerStart
 
         console.log(
-          `Worker ${index.toString().padStart(2)}: ${workerDuration.toFixed(2)}ms, ${Math.floor((idsPerWorker / workerDuration) * 1000).toLocaleString()} IDs/秒`
+          `Worker ${index.toString().padStart(2)}: ${workerDuration.toFixed(2)}ms, ${Math.floor((idsPerWorker / workerDuration) * 1000).toLocaleString()} IDs/秒`,
         )
 
         ids.forEach((id) => allIds.add(id.toString()))
@@ -273,7 +278,7 @@ describe('GenidOptimized - 压力测试', () => {
       console.log(`总生成数: ${totalCount.toLocaleString()}`)
       console.log(`唯一 ID 数: ${allIds.size.toLocaleString()}`)
       console.log(
-        `总吞吐量: ${Math.floor((totalCount / totalDuration) * 1000).toLocaleString()} IDs/秒`
+        `总吞吐量: ${Math.floor((totalCount / totalDuration) * 1000).toLocaleString()} IDs/秒`,
       )
 
       // 所有 ID 必须唯一
@@ -303,7 +308,7 @@ describe('GenidOptimized - 压力测试', () => {
     console.log(`生成数量: ${count.toLocaleString()}`)
     console.log(`耗时: ${duration.toFixed(2)}ms`)
     console.log(
-      `吞吐量: ${Math.floor((count / duration) * 1000).toLocaleString()} IDs/秒`
+      `吞吐量: ${Math.floor((count / duration) * 1000).toLocaleString()} IDs/秒`,
     )
     console.log(`漂移次数: ${stats.overCostCount.toLocaleString()}`)
     console.log(`漂移率: ${((stats.overCostCount / count) * 100).toFixed(2)}%`)
@@ -346,10 +351,10 @@ describe('GenidOptimized - 压力测试', () => {
             })
             console.log(`违规 #${violations}: 批次 ${batch}, 位置 ${i}`)
             console.log(
-              `  前一个: ${prevId} (时间戳: ${parsedPrev.timestampMs}, 序列: ${parsedPrev.sequence})`
+              `  前一个: ${prevId} (时间戳: ${parsedPrev.timestampMs}, 序列: ${parsedPrev.sequence})`,
             )
             console.log(
-              `  当前: ${id} (时间戳: ${parsedCurr.timestampMs}, 序列: ${parsedCurr.sequence})`
+              `  当前: ${id} (时间戳: ${parsedCurr.timestampMs}, 序列: ${parsedCurr.sequence})`,
             )
           }
         }
@@ -435,7 +440,7 @@ describe('GenidOptimized - 压力测试', () => {
         const parsed = genid.parse(ids[0])
 
         console.log(
-          `${name} (${workerId}): ${duration.toFixed(2)}ms, 唯一: ${uniqueIds.size}, workerId: ${parsed.workerId}`
+          `${name} (${workerId}): ${duration.toFixed(2)}ms, 唯一: ${uniqueIds.size}, workerId: ${parsed.workerId}`,
         )
 
         expect(uniqueIds.size).toBe(count)
@@ -476,7 +481,7 @@ describe('GenidOptimized - 压力测试', () => {
       console.log(`唯一 ID: ${allIds.size.toLocaleString()}`)
       console.log(`耗时: ${duration.toFixed(2)}ms`)
       console.log(
-        `吞吐量: ${Math.floor((iterations / duration) * 1000).toLocaleString()} IDs/秒`
+        `吞吐量: ${Math.floor((iterations / duration) * 1000).toLocaleString()} IDs/秒`,
       )
 
       expect(allIds.size).toBe(iterations)

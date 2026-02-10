@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { beforeEach, describe, expect, it } from 'vitest'
 import { GenidOptimized } from '../src'
 import { GenidMethod } from '../src/types'
 
@@ -11,23 +11,23 @@ describe('GenidOptimized', () => {
 
     it('应该在缺少 workerId 时抛出错误', () => {
       expect(() => new GenidOptimized({} as any)).toThrow(
-        '[GenidOptimized] workerId 是必须参数'
+        '[GenidOptimized] workerId 是必须参数',
       )
     })
 
     it('应该在 workerIdBitLength 无效时抛出错误', () => {
-      expect(() => new GenidOptimized({ workerId: 1, workerIdBitLength: 16 })).toThrow(
-        '[GenidOptimized] workerIdBitLength 必须在 1 到 15 之间'
-      )
+      expect(
+        () => new GenidOptimized({ workerId: 1, workerIdBitLength: 16 }),
+      ).toThrow('[GenidOptimized] workerIdBitLength 必须在 1 到 15 之间')
     })
 
     it('应该在 seqBitLength 无效时抛出错误', () => {
-      expect(() => new GenidOptimized({ workerId: 1, seqBitLength: 2 })).toThrow(
-        '[GenidOptimized] seqBitLength 必须在 3 到 21 之间'
-      )
-      expect(() => new GenidOptimized({ workerId: 1, seqBitLength: 22 })).toThrow(
-        '[GenidOptimized] seqBitLength 必须在 3 到 21 之间'
-      )
+      expect(
+        () => new GenidOptimized({ workerId: 1, seqBitLength: 2 }),
+      ).toThrow('[GenidOptimized] seqBitLength 必须在 3 到 21 之间')
+      expect(
+        () => new GenidOptimized({ workerId: 1, seqBitLength: 22 }),
+      ).toThrow('[GenidOptimized] seqBitLength 必须在 3 到 21 之间')
     })
 
     it('应该在位长度总和超过 22 时抛出错误', () => {
@@ -37,16 +37,16 @@ describe('GenidOptimized', () => {
             workerId: 1,
             workerIdBitLength: 15,
             seqBitLength: 10,
-          })
+          }),
       ).toThrow('[GenidOptimized] workerIdBitLength + seqBitLength 不能超过 22')
     })
 
     it('应该在 workerId 超出范围时抛出错误', () => {
       expect(() => new GenidOptimized({ workerId: -1 })).toThrow(
-        '[GenidOptimized] workerId 必须在 0 到'
+        '[GenidOptimized] workerId 必须在 0 到',
       )
       expect(() => new GenidOptimized({ workerId: 64 })).toThrow(
-        '[GenidOptimized] workerId 必须在 0 到'
+        '[GenidOptimized] workerId 必须在 0 到',
       )
     })
 
@@ -56,7 +56,7 @@ describe('GenidOptimized', () => {
           new GenidOptimized({
             workerId: 1,
             minSeqNumber: 4,
-          })
+          }),
       ).toThrow('[GenidOptimized] minSeqNumber 必须至少为 5')
     })
 
@@ -67,7 +67,7 @@ describe('GenidOptimized', () => {
             workerId: 1,
             minSeqNumber: 10,
             maxSeqNumber: 5,
-          })
+          }),
       ).toThrow('[GenidOptimized] maxSeqNumber 必须大于或等于 minSeqNumber')
     })
 
@@ -201,8 +201,12 @@ describe('GenidOptimized', () => {
     })
 
     it('应该在数量无效时抛出错误', () => {
-      expect(() => genid.nextBatch(0)).toThrow('[GenidOptimized] 批量生成数量必须大于 0')
-      expect(() => genid.nextBatch(-1)).toThrow('[GenidOptimized] 批量生成数量必须大于 0')
+      expect(() => genid.nextBatch(0)).toThrow(
+        '[GenidOptimized] 批量生成数量必须大于 0',
+      )
+      expect(() => genid.nextBatch(-1)).toThrow(
+        '[GenidOptimized] 批量生成数量必须大于 0',
+      )
     })
   })
 
@@ -389,7 +393,9 @@ describe('GenidOptimized', () => {
     })
 
     it('应该在格式化负数 ID 时抛出错误', () => {
-      expect(() => genid.formatBinary(-1)).toThrow('[GenidOptimized] ID 不能为负数')
+      expect(() => genid.formatBinary(-1)).toThrow(
+        '[GenidOptimized] ID 不能为负数',
+      )
     })
   })
 
@@ -554,9 +560,9 @@ describe('GenidOptimized', () => {
         const curr = BigInt(ids[i])
         if (curr <= prev) {
           console.log(`发现重复/倒序 ID:`)
-          console.log(`  索引 ${i-1}: ${prev} (${ids[i-1]})`)
+          console.log(`  索引 ${i - 1}: ${prev} (${ids[i - 1]})`)
           console.log(`  索引 ${i}: ${curr} (${ids[i]})`)
-          console.log(`  解析 [${i-1}]:`, genid.parse(ids[i-1]))
+          console.log(`  解析 [${i - 1}]:`, genid.parse(ids[i - 1]))
           console.log(`  解析 [${i}]:`, genid.parse(ids[i]))
         }
         expect(curr).toBeGreaterThan(prev)
