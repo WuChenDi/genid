@@ -8,6 +8,7 @@
 - 🔄 **时钟回拨处理**：优雅处理时钟回拨，不阻塞 ID 生成
 - ⚙️ **灵活配置**：支持自定义位长度分配
 - 📊 **性能监控**：内置统计和调试功能
+- ✅ **ID 验证**：验证 ID 的有效性，支持严格/宽松模式
 
 ## 架构设计
 
@@ -153,6 +154,46 @@ console.log(info)
 // }
 ```
 
+### 验证 ID
+
+#### `isValid(id, strictWorkerId?)`
+
+验证 ID 是否为有效的 Snowflake ID
+
+**参数**
+- `id` - 要验证的 ID（支持 Number、BigInt、String 类型）
+- `strictWorkerId` - 可选，是否严格验证 workerId 必须匹配当前实例（默认：false）
+
+**返回值**
+- `boolean` - ID 是否有效
+
+**验证规则**
+- ✅ ID 为正数
+- ✅ ID 在 64 位范围内
+- ✅ 时间戳在合理范围内（>= baseTime，<= 当前时间 + 1秒容差）
+- ✅ workerId 在有效范围内（0 到 2^workerIdBitLength-1）
+- ✅ 序列号在有效范围内（0 到 2^seqBitLength-1）
+- ✅ 严格模式下：workerId 必须匹配当前实例
+
+```typescript
+const genid = new GenidOptimized({ workerId: 1 })
+const id = genid.nextId()
+
+// 宽松模式：验证 ID 格式是否有效
+genid.isValid(id) // true
+genid.isValid(12345) // false（无效的 ID）
+genid.isValid(-1) // false（负数）
+genid.isValid('invalid') // false（无效格式）
+
+// 严格模式：验证 ID 是否由当前实例生成
+const genid2 = new GenidOptimized({ workerId: 2 })
+const id2 = genid2.nextId()
+
+genid.isValid(id2) // true（宽松模式，其他实例的 ID 也有效）
+genid.isValid(id2, true) // false（严格模式，workerId 不匹配）
+genid.isValid(id, true) // true（严格模式，workerId 匹配）
+```
+
 ### 统计与配置
 
 #### `getStats()`
@@ -240,6 +281,30 @@ const genid = new GenidOptimized({
   seqBitLength: 12,       // 每毫秒 4096 个 ID
   topOverCostCount: 5000
 })
+```
+
+### 验证 ID
+
+```typescript
+const genid = new GenidOptimized({ workerId: 1 })
+
+// 生成并验证 ID
+const id = genid.nextId()
+if (genid.isValid(id)) {
+  console.log('ID 有效')
+}
+
+// 验证外部 ID（例如从数据库或 API 获取的 ID）
+const externalId = '123456789012345'
+if (genid.isValid(externalId)) {
+  const info = genid.parse(externalId)
+  console.log('ID 有效，解析结果:', info)
+} else {
+  console.error('ID 无效')
+}
+
+// 严格验证（只接受当前实例生成的 ID）
+const isMyId = genid.isValid(id, true)
 ```
 
 ### 监控性能
