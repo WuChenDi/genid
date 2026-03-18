@@ -1,6 +1,11 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { GenidOptimized } from '../src'
-import { GenidMethod } from '../src/types'
+import type {
+  ConfigResult,
+  GenidOptions,
+  ParseResult,
+  StatsResult,
+} from '../src'
+import { GenidMethod, GenidOptimized } from '../src'
 
 describe('GenidOptimized', () => {
   describe('构造函数和配置验证', () => {
@@ -446,6 +451,38 @@ describe('GenidOptimized', () => {
       expect(ids).toHaveLength(100)
       expect(new Set(ids.map((id) => id.toString())).size).toBe(100)
     })
+
+    it('TRADITIONAL 模式在序列号溢出时不应触发漂移', () => {
+      const genid = new GenidOptimized({
+        workerId: 1,
+        method: GenidMethod.TRADITIONAL,
+        seqBitLength: 3, // 最大序列号为 7，范围 5-7，只有 3 个可用
+        minSeqNumber: 5,
+      })
+
+      // 生成足够多的 ID 以触发多次序列号溢出
+      genid.nextBatch(100)
+
+      const stats = genid.getStats()
+      // TRADITIONAL 模式不应产生漂移计数
+      expect(stats.overCostCount).toBe(0)
+      expect(stats.currentState).toBe('NORMAL')
+    })
+
+    it('DRIFT 模式在序列号溢出时应触发漂移', () => {
+      const genid = new GenidOptimized({
+        workerId: 1,
+        method: GenidMethod.DRIFT,
+        seqBitLength: 3,
+        minSeqNumber: 5,
+      })
+
+      genid.nextBatch(100)
+
+      const stats = genid.getStats()
+      // DRIFT 模式应产生漂移计数
+      expect(stats.overCostCount).toBeGreaterThan(0)
+    })
   })
 
   describe('多实例测试', () => {
@@ -770,6 +807,48 @@ describe('GenidOptimized', () => {
 
       // 但可能无法验证其他配置的 ID（因为位移不同）
       // 这个取决于具体的 ID 值，所以我们只测试自己的配置
+    })
+  })
+
+  describe('baseTime 校验', () => {
+    it('应该在 baseTime 为未来时间时抛出错误', () => {
+      expect(
+        () =>
+          new GenidOptimized({
+            workerId: 1,
+            baseTime: Date.now() + 100000,
+          }),
+      ).toThrow('[GenidOptimized] baseTime 不能大于当前时间')
+    })
+
+    it('应该接受合法的过去 baseTime', () => {
+      const genid = new GenidOptimized({
+        workerId: 1,
+        baseTime: new Date('2020-01-01').valueOf(),
+      })
+      expect(genid).toBeInstanceOf(GenidOptimized)
+    })
+  })
+
+  describe('类型导出', () => {
+    it('应该从包入口导出 GenidMethod 枚举', () => {
+      expect(GenidMethod.DRIFT).toBe(1)
+      expect(GenidMethod.TRADITIONAL).toBe(2)
+    })
+
+    it('应该从包入口导出类型（编译时验证）', () => {
+      const options: GenidOptions = { workerId: 1 }
+      const genid = new GenidOptimized(options)
+
+      const id = genid.nextId()
+      const parsed: ParseResult = genid.parse(id)
+      expect(parsed.workerId).toBe(1)
+
+      const stats: StatsResult = genid.getStats()
+      expect(stats.totalGenerated).toBe(1)
+
+      const config: ConfigResult = genid.getConfig()
+      expect(config.method).toBe('DRIFT')
     })
   })
 })
