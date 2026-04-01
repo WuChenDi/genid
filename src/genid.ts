@@ -11,11 +11,14 @@ import type {
 import { GenidMethod } from './types'
 
 /**
- * 基于 Snowflake 算法的分布式唯一 ID 生成器
+ * Distributed unique ID generator based on the Snowflake algorithm.
  *
- * - 漂移算法：高并发下借用未来时间戳，突破每毫秒序列号上限
- * - 时钟回拨：使用保留序列号（0-4）优雅降级，不阻塞生成
- * - 非线程安全，每个 Worker/进程应使用独立实例和不同 workerId
+ * - Drift mode: borrows future timestamps under high concurrency to exceed the
+ *   per-millisecond sequence limit.
+ * - Clock rollback: uses reserved sequence numbers (0-4) for graceful degradation
+ *   without blocking generation.
+ * - Not thread-safe; each worker/process should use a separate instance with a
+ *   distinct workerId.
  *
  * @example
  * const genid = new GenidOptimized({ workerId: 1 });
@@ -44,7 +47,7 @@ export class GenidOptimized {
 
   constructor(options: GenidOptions) {
     if (options.workerId === undefined || options.workerId === null) {
-      throw new Error('[GenidOptimized] workerId 是必须参数')
+      throw new Error('[GenidOptimized] workerId is required')
     }
 
     const config = initConfig(options)
@@ -79,12 +82,12 @@ export class GenidOptimized {
     this._overCostCountInOneTerm = 0n
   }
 
-  /** 获取相对于 baseTime 的当前时间戳 */
+  /** Returns the current timestamp relative to baseTime. */
   private _getCurrentTimeTick(): bigint {
     return BigInt(Date.now()) - this.baseTime
   }
 
-  /** 自旋等待直到时间前进到下一毫秒 */
+  /** Spin-waits until the clock advances to the next millisecond. */
   private _getNextTimeTick(): bigint {
     let timeTick = this._getCurrentTimeTick()
     let spinCount = 0
@@ -92,7 +95,7 @@ export class GenidOptimized {
 
     while (timeTick <= this._lastTimeTick) {
       spinCount++
-      // 防止系统时间异常导致死循环
+      // Guard against an abnormal system clock causing an infinite loop.
       if (spinCount > maxSpinCount) {
         return this._lastTimeTick + 1n
       }
@@ -101,7 +104,7 @@ export class GenidOptimized {
     return timeTick
   }
 
-  /** 组装 ID：timestamp | workerId | sequence，并自增序列号 */
+  /** Assembles an ID as timestamp | workerId | sequence, then increments the sequence. */
   private _calcId(useTimeTick: bigint): bigint {
     const result =
       (BigInt(useTimeTick) << this._timestampShift) +
@@ -114,7 +117,7 @@ export class GenidOptimized {
     return result
   }
 
-  /** 时钟回拨时组装 ID，使用保留序列号（0-4）避免冲突 */
+  /** Assembles an ID during a clock-rollback event using reserved sequence numbers (0-4) to avoid conflicts. */
   private _calcTurnBackId(useTimeTick: bigint): bigint {
     const result =
       (BigInt(useTimeTick) << this._timestampShift) +
@@ -126,11 +129,11 @@ export class GenidOptimized {
     return result
   }
 
-  /** 漂移状态下生成 ID */
+  /** Generates an ID while in drift (over-cost) mode. */
   private _nextOverCostId(): bigint {
     const currentTimeTick = this._getCurrentTimeTick()
 
-    // 时间已前进，先用完当前序列号再切回正常状态
+    // Clock has advanced — exhaust the current sequence then return to normal mode.
     if (currentTimeTick > this._lastTimeTick) {
       this._endOverCostAction(currentTimeTick)
 
@@ -150,7 +153,7 @@ export class GenidOptimized {
       return this._calcId(this._lastTimeTick)
     }
 
-    // 漂移次数达到上限，强制等待下一毫秒
+    // Drift count has reached the cap — force a wait for the next millisecond.
     if (this._overCostCountInOneTerm >= this.topOverCostCount) {
       this._endOverCostAction(currentTimeTick)
       this._lastTimeTick = this._getNextTimeTick()
@@ -160,7 +163,7 @@ export class GenidOptimized {
       return this._calcId(this._lastTimeTick)
     }
 
-    // 序列号溢出，借用下一毫秒时间戳
+    // Sequence exhausted — borrow the next millisecond's timestamp.
     if (this._currentSeqNumber > this.maxSeqNumber) {
       this._lastTimeTick++
       this._currentSeqNumber = this.minSeqNumber
@@ -172,17 +175,17 @@ export class GenidOptimized {
     return this._calcId(this._lastTimeTick)
   }
 
-  /** 正常状态下生成 ID */
+  /** Generates an ID in normal mode. */
   private _nextNormalId(): bigint {
     const currentTimeTick = this._getCurrentTimeTick()
 
-    // 时钟回拨处理
+    // Handle clock rollback.
     if (currentTimeTick < this._lastTimeTick) {
       if (this._turnBackTimeTick < 1) {
         this._turnBackTimeTick = this._lastTimeTick - 1n
         this._turnBackIndex++
 
-        // 保留序列号（1-4）用完，回退到等待模式
+        // Reserved sequence slots (1-4) exhausted — fall back to waiting mode.
         if (this._turnBackIndex > 4) {
           this._lastTimeTick = this._getNextTimeTick()
           this._turnBackIndex = 0
@@ -195,7 +198,7 @@ export class GenidOptimized {
         this._stats.turnBackCount++
       }
 
-      // 回拨时间戳即将越过正常时间戳，强制等待避免 ID 冲突
+      // Turn-back timestamp is about to overtake the normal timestamp — force a wait to prevent ID collisions.
       if (this._turnBackTimeTick >= this._lastTimeTick) {
         this._turnBackTimeTick = 0n
         this._turnBackIndex = 0
@@ -207,21 +210,21 @@ export class GenidOptimized {
       return this._calcTurnBackId(this._turnBackTimeTick)
     }
 
-    // 时间已追上，清除回拨状态
+    // Clock has caught up — clear the rollback state.
     if (this._turnBackTimeTick > 0) {
       this._endTurnBackAction(this._turnBackTimeTick)
       this._turnBackTimeTick = 0n
       this._turnBackIndex = 0
     }
 
-    // 时间前进，重置序列号
+    // Clock advanced — reset the sequence.
     if (currentTimeTick > this._lastTimeTick) {
       this._lastTimeTick = currentTimeTick
       this._currentSeqNumber = this.minSeqNumber
       return this._calcId(this._lastTimeTick)
     }
 
-    // 序列号溢出（_calcId 先用再自增，所以 > maxSeq 才需要进位）
+    // Sequence exhausted (_calcId increments after use, so > maxSeq triggers carry).
     if (this._currentSeqNumber > this.maxSeqNumber) {
       if (this.method === BigInt(GenidMethod.TRADITIONAL)) {
         this._lastTimeTick = this._getNextTimeTick()
@@ -229,7 +232,7 @@ export class GenidOptimized {
         return this._calcId(this._lastTimeTick)
       }
 
-      // 漂移算法：借用未来时间戳
+      // Drift mode: borrow the next millisecond's timestamp.
       this._beginOverCostAction(currentTimeTick)
       this._lastTimeTick++
       this._currentSeqNumber = this.minSeqNumber
@@ -242,7 +245,7 @@ export class GenidOptimized {
     return this._calcId(this._lastTimeTick)
   }
 
-  // ---- 生命周期钩子（子类可重写以实现监控/日志） ----
+  // ---- Lifecycle hooks (subclasses may override for monitoring/logging) ----
 
   protected _beginOverCostAction(_useTimeTick: bigint): void {}
   protected _endOverCostAction(_useTimeTick: bigint): void {}
@@ -250,36 +253,37 @@ export class GenidOptimized {
   protected _endTurnBackAction(_useTimeTick: bigint): void {}
 
   /**
-   * 生成 ID，返回 number。超出安全整数范围时抛错。
-   * @throws 当 ID >= Number.MAX_SAFE_INTEGER + 1 时
+   * Generates an ID and returns it as a number.
+   * Throws if the ID exceeds the safe integer range.
+   * @throws When ID >= Number.MAX_SAFE_INTEGER + 1
    */
   nextNumber(): number {
     const id = this._isOverCost ? this._nextOverCostId() : this._nextNormalId()
 
     if (id >= 9007199254740992n) {
       throw new Error(
-        `[GenidOptimized] 生成的 ID ${id.toString()} 超出 JavaScript 安全整数范围 (9007199254740992)。请使用 nextBigId() 方法。`,
+        `[GenidOptimized] Generated ID ${id.toString()} exceeds the JavaScript safe integer range (9007199254740992). Use nextBigId() instead.`,
       )
     }
 
     return Number(id)
   }
 
-  /** 生成 ID，安全范围内返回 number，否则返回 bigint */
+  /** Generates an ID and returns a number if within safe range, otherwise a bigint. */
   nextId(): number | bigint {
     const id = this._isOverCost ? this._nextOverCostId() : this._nextNormalId()
     return id >= 9007199254740992n ? id : Number(id)
   }
 
-  /** 生成 ID，始终返回 bigint */
+  /** Generates an ID and always returns a bigint. */
   nextBigId(): bigint {
     return this._isOverCost ? this._nextOverCostId() : this._nextNormalId()
   }
 
-  /** 批量生成 ID */
+  /** Generates a batch of IDs. */
   nextBatch(count: number, asBigInt: boolean = false): Array<number | bigint> {
     if (count <= 0) {
-      throw new Error('[GenidOptimized] 批量生成数量必须大于 0')
+      throw new Error('[GenidOptimized] batch count must be greater than 0')
     }
 
     const ids: Array<number | bigint> = []
@@ -291,7 +295,7 @@ export class GenidOptimized {
   }
 
   /**
-   * 解析 ID，提取时间戳、workerId、序列号
+   * Parses an ID and extracts its timestamp, workerId, and sequence number.
    *
    * @example
    * genid.parse(id)
@@ -301,7 +305,7 @@ export class GenidOptimized {
     const idBigInt = BigInt(id)
 
     if (idBigInt < 0n) {
-      throw new Error('[GenidOptimized] ID 不能为负数')
+      throw new Error('[GenidOptimized] ID must not be negative')
     }
 
     const timestampTick = idBigInt >> this._timestampShift
@@ -321,7 +325,7 @@ export class GenidOptimized {
     }
   }
 
-  /** 获取运行统计信息 */
+  /** Returns runtime statistics. */
   getStats(): StatsResult {
     const uptime = Date.now() - this._stats.startTime
     const totalGenerated = Number(this._stats.totalGenerated)
@@ -337,7 +341,7 @@ export class GenidOptimized {
     }
   }
 
-  /** 重置统计数据 */
+  /** Resets the statistics counters. */
   resetStats(): void {
     this._stats = {
       totalGenerated: 0n,
@@ -347,7 +351,7 @@ export class GenidOptimized {
     }
   }
 
-  /** 获取当前配置信息 */
+  /** Returns the current configuration. */
   getConfig(): ConfigResult {
     const maxWorkerId = (1 << Number(this.workerIdBitLength)) - 1
     const maxSequence = (1 << Number(this.seqBitLength)) - 1
@@ -369,15 +373,15 @@ export class GenidOptimized {
   }
 
   /**
-   * 验证 ID 是否为当前配置下合法的 Snowflake ID
+   * Validates whether an ID is a valid Snowflake ID under the current configuration.
    *
-   * @param options - 校验选项，或传 boolean 表示 strictWorkerId（向后兼容）
+   * @param options - Validation options, or a boolean for strictWorkerId (backward-compatible).
    *
    * @example
-   * genid.isValid(id)                            // 宽松校验
-   * genid.isValid(id, true)                      // 要求 workerId 匹配
-   * genid.isValid(id, { strictWorkerId: true })  // 同上
-   * genid.isValid(id, { afterTime: startupTime }) // 要求 ID 生成时间晚于 startupTime
+   * genid.isValid(id)                            // loose validation
+   * genid.isValid(id, true)                      // require workerId match
+   * genid.isValid(id, { strictWorkerId: true })  // same as above
+   * genid.isValid(id, { afterTime: startupTime }) // require ID generation time after startupTime
    */
   isValid(
     id: number | bigint | string,
@@ -403,11 +407,11 @@ export class GenidOptimized {
 
       if (timestamp < this.baseTime) return false
 
-      // 允许 1 秒漂移容差
+      // Allow a 1-second drift tolerance.
       const currentTime = BigInt(Date.now())
       if (timestamp > currentTime + 1000n) return false
 
-      // afterTime: ID 的生成时间不得早于指定时间
+      // afterTime: the ID's generation time must not be earlier than the specified time.
       if (opts.afterTime != null && timestamp < BigInt(opts.afterTime)) {
         return false
       }
@@ -425,12 +429,12 @@ export class GenidOptimized {
     }
   }
 
-  /** 将 ID 格式化为带标注的二进制字符串（调试用） */
+  /** Formats an ID as an annotated binary string (useful for debugging). */
   formatBinary(id: number | bigint | string): string {
     const idBigInt = BigInt(id)
 
     if (idBigInt < 0n) {
-      throw new Error('[GenidOptimized] ID 不能为负数')
+      throw new Error('[GenidOptimized] ID must not be negative')
     }
 
     const binary = idBigInt.toString(2).padStart(64, '0')
@@ -444,9 +448,9 @@ export class GenidOptimized {
     return [
       `ID: ${id}`,
       'Binary (64-bit):',
-      `${binary.slice(0, timestampBits)} - 时间戳 (${timestampBits} bits) = ${parsed.timestamp.toISOString()}`,
-      `${binary.slice(timestampBits, workerIdStart + Number(this.workerIdBitLength))} - 工作节点 ID (${this.workerIdBitLength} bits) = ${parsed.workerId}`,
-      `${binary.slice(seqStart)} - 序列号 (${this.seqBitLength} bits) = ${parsed.sequence}`,
+      `${binary.slice(0, timestampBits)} - Timestamp (${timestampBits} bits) = ${parsed.timestamp.toISOString()}`,
+      `${binary.slice(timestampBits, workerIdStart + Number(this.workerIdBitLength))} - Worker ID (${this.workerIdBitLength} bits) = ${parsed.workerId}`,
+      `${binary.slice(seqStart)} - Sequence (${this.seqBitLength} bits) = ${parsed.sequence}`,
     ].join('\n')
   }
 }

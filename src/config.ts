@@ -1,7 +1,7 @@
 import type { GenidConfig, GenidOptions } from './types'
 import { GenidMethod } from './types'
 
-/** 将用户配置与默认值合并，返回完整内部配置 */
+/** Merges user options with defaults and returns a complete internal config. */
 export function initConfig(options: GenidOptions): GenidConfig {
   const config: GenidConfig = {
     workerId: options.workerId,
@@ -31,7 +31,7 @@ export function initConfig(options: GenidOptions): GenidConfig {
       ? options.maxSeqNumber
       : (1 << config.seqBitLength) - 1
 
-  // 0-4 保留用于时钟回拨，默认从 5 开始
+  // Values 0-4 are reserved for clock rollback; default starts at 5.
   config.minSeqNumber =
     options.minSeqNumber != null && options.minSeqNumber >= 5
       ? options.minSeqNumber
@@ -45,7 +45,7 @@ export function initConfig(options: GenidOptions): GenidConfig {
   return config
 }
 
-/** 校验配置合法性，不合法则抛出 Error */
+/** Validates the config and throws an Error if any value is out of range. */
 export function validateConfig(config: GenidConfig): void {
   const {
     workerId,
@@ -57,33 +57,41 @@ export function validateConfig(config: GenidConfig): void {
   } = config
 
   if (baseTime > Date.now()) {
-    throw new Error('[GenidOptimized] baseTime 不能大于当前时间')
+    throw new Error('[GenidOptimized] baseTime must not be in the future')
   }
 
   if (workerIdBitLength < 1 || workerIdBitLength > 15) {
-    throw new Error('[GenidOptimized] workerIdBitLength 必须在 1 到 15 之间')
+    throw new Error(
+      '[GenidOptimized] workerIdBitLength must be between 1 and 15',
+    )
   }
 
   if (seqBitLength < 3 || seqBitLength > 21) {
-    throw new Error('[GenidOptimized] seqBitLength 必须在 3 到 21 之间')
+    throw new Error('[GenidOptimized] seqBitLength must be between 3 and 21')
   }
 
   if (workerIdBitLength + seqBitLength > 22) {
     throw new Error(
-      '[GenidOptimized] workerIdBitLength + seqBitLength 不能超过 22',
+      '[GenidOptimized] workerIdBitLength + seqBitLength must not exceed 22',
     )
   }
 
   const maxWorkerId = (1 << workerIdBitLength) - 1
   if (workerId < 0 || workerId > maxWorkerId) {
-    throw new Error(`[GenidOptimized] workerId 必须在 0 到 ${maxWorkerId} 之间`)
+    throw new Error(
+      `[GenidOptimized] workerId must be between 0 and ${maxWorkerId}`,
+    )
   }
 
   if (minSeqNumber < 5) {
-    throw new Error('[GenidOptimized] minSeqNumber 必须至少为 5(0-4 保留)')
+    throw new Error(
+      '[GenidOptimized] minSeqNumber must be at least 5 (0-4 are reserved)',
+    )
   }
 
   if (maxSeqNumber < minSeqNumber) {
-    throw new Error('[GenidOptimized] maxSeqNumber 必须大于或等于 minSeqNumber')
+    throw new Error(
+      '[GenidOptimized] maxSeqNumber must be greater than or equal to minSeqNumber',
+    )
   }
 }
