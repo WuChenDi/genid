@@ -3,17 +3,19 @@
 [![npm version](https://img.shields.io/npm/v/@cdlab996/genid)](https://www.npmjs.com/package/@cdlab996/genid)
 [![license](https://img.shields.io/npm/l/@cdlab996/genid)](./LICENSE)
 
-基于 Snowflake 算法的高性能分布式唯一 ID 生成器，支持漂移算法和时钟回拨处理。
+High-performance distributed unique ID generator based on the Snowflake algorithm, with drift mode and clock-rollback handling.
 
-## 特性
+[中文文档](./README.zh-CN.md)
 
-- **漂移算法** - 高并发场景下突破每毫秒序列号上限，性能更优
-- **时钟回拨处理** - 使用保留序列号优雅降级，不阻塞 ID 生成
-- **灵活配置** - 支持自定义时间戳、节点 ID、序列号的位长度分配
-- **ID 验证** - 支持严格/宽松模式校验 ID 有效性
-- **运行监控** - 内置统计、解析和二进制格式化调试工具
+## Features
 
-## 安装
+- **Drift Algorithm** - Exceeds per-millisecond sequence limits under high concurrency for better throughput
+- **Clock Rollback Handling** - Graceful degradation using reserved sequence numbers without blocking ID generation
+- **Flexible Configuration** - Customize bit allocation for timestamp, worker ID, and sequence
+- **ID Validation** - Strict and loose validation modes with `afterTime` support
+- **Runtime Monitoring** - Built-in statistics, parsing, and binary formatting for debugging
+
+## Installation
 
 ```bash
 # npm
@@ -23,25 +25,25 @@ npm install @cdlab996/genid
 pnpm add @cdlab996/genid
 ```
 
-## 快速开始
+## Quick Start
 
 ```typescript
 import { GenidOptimized } from '@cdlab996/genid'
 
-// 创建实例（每个 Worker/进程使用不同的 workerId）
+// Create an instance (use a different workerId for each worker/process)
 const genid = new GenidOptimized({ workerId: 1 })
 
-// 生成 ID
+// Generate an ID
 const id = genid.nextId()
 
-// 批量生成
+// Batch generate
 const ids = genid.nextBatch(1000)
 
-// 解析 ID
+// Parse an ID
 const info = genid.parse(id)
 // => { timestamp: Date, timestampMs: 1609459200000, workerId: 1, sequence: 42 }
 
-// 验证 ID
+// Validate an ID
 genid.isValid(id) // true
 ```
 
@@ -49,48 +51,52 @@ genid.isValid(id) // true
 
 ### `new GenidOptimized(options)`
 
-| 参数                | 类型          | 必填  | 默认值             | 说明                                          |
-| ------------------- | ------------- | :---: | ------------------ | --------------------------------------------- |
-| `workerId`          | `number`      |  Yes  | -                  | 工作节点 ID（0 ~ 2^workerIdBitLength-1）      |
-| `method`            | `GenidMethod` |       | `DRIFT`            | 算法：`DRIFT`（漂移）或 `TRADITIONAL`（传统） |
-| `baseTime`          | `number`      |       | `1577836800000`    | 起始时间戳，毫秒（默认 2020-01-01）           |
-| `workerIdBitLength` | `number`      |       | `6`                | 节点 ID 位数（1-15）                          |
-| `seqBitLength`      | `number`      |       | `6`                | 序列号位数（3-21）                            |
-| `maxSeqNumber`      | `number`      |       | `2^seqBitLength-1` | 最大序列号                                    |
-| `minSeqNumber`      | `number`      |       | `5`                | 最小序列号（0-4 保留用于时钟回拨）            |
-| `topOverCostCount`  | `number`      |       | `2000`             | 最大漂移次数                                  |
+| Parameter           | Type          | Required | Default            | Description                                         |
+| ------------------- | ------------- | :------: | ------------------ | --------------------------------------------------- |
+| `workerId`          | `number`      |   Yes    | -                  | Worker node ID (0 to 2^workerIdBitLength-1)         |
+| `method`            | `GenidMethod` |          | `DRIFT`            | Algorithm: `DRIFT` or `TRADITIONAL`                 |
+| `baseTime`          | `number`      |          | `1577836800000`    | Base timestamp in ms (default: 2020-01-01)          |
+| `workerIdBitLength` | `number`      |          | `6`                | Bit length for worker ID (1-15)                     |
+| `seqBitLength`      | `number`      |          | `6`                | Bit length for sequence (3-21)                      |
+| `maxSeqNumber`      | `number`      |          | `2^seqBitLength-1` | Maximum sequence number                             |
+| `minSeqNumber`      | `number`      |          | `5`                | Minimum sequence number (0-4 reserved for rollback) |
+| `topOverCostCount`  | `number`      |          | `2000`             | Maximum drift count                                 |
 
-### 生成 ID
+### Generating IDs
 
 ```typescript
-genid.nextId()            // 返回 number | bigint（自动选择）
-genid.nextNumber()        // 返回 number（超出安全整数范围抛错）
-genid.nextBigId()         // 返回 bigint
-genid.nextBatch(100)      // 批量生成 100 个 ID
-genid.nextBatch(100, true) // 批量生成 100 个 BigInt ID
+genid.nextId()             // Returns number | bigint (auto-selects)
+genid.nextNumber()         // Returns number (throws if exceeds safe integer range)
+genid.nextBigId()          // Returns bigint
+genid.nextBatch(100)       // Batch generate 100 IDs
+genid.nextBatch(100, true) // Batch generate 100 BigInt IDs
 ```
 
-### 解析与验证
+### Parsing & Validation
 
 ```typescript
-// 解析 ID 的组成部分
+// Parse an ID into its components
 genid.parse(id)
 // => { timestamp: Date, timestampMs: number, workerId: number, sequence: number }
 
-// 宽松验证：检查 ID 格式是否有效
-genid.isValid(id)           // true
-genid.isValid(12345)        // false
-genid.isValid('invalid')    // false
+// Loose validation: checks structural validity
+genid.isValid(id)            // true
+genid.isValid('invalid')     // false
 
-// 严格验证：要求 workerId 匹配当前实例
-genid.isValid(id, true)     // true（本实例生成的 ID）
-genid.isValid(otherId, true) // false（其他实例生成的 ID）
+// Strict validation: requires workerId to match the current instance
+genid.isValid(id, true)      // true (generated by this instance)
+genid.isValid(otherId, true) // false (generated by another instance)
+
+// Time-bound validation: reject IDs generated before a given time
+const startupTime = Date.now()
+genid.isValid(id, { afterTime: startupTime })                       // true
+genid.isValid(id, { strictWorkerId: true, afterTime: startupTime }) // combined
 ```
 
-### 统计与配置
+### Statistics & Configuration
 
 ```typescript
-// 获取运行统计
+// Get runtime statistics
 genid.getStats()
 // => {
 //   totalGenerated: 1000,
@@ -101,7 +107,7 @@ genid.getStats()
 //   currentState: 'NORMAL' | 'OVER_COST'
 // }
 
-// 获取当前配置
+// Get current configuration
 genid.getConfig()
 // => {
 //   method: 'DRIFT',
@@ -116,24 +122,24 @@ genid.getConfig()
 //   sequenceBits: 6
 // }
 
-// 重置统计
+// Reset statistics
 genid.resetStats()
 ```
 
-### 调试
+### Debugging
 
 ```typescript
 genid.formatBinary(id)
 // ID: 123456789012345
 // Binary (64-bit):
-// 0000000000011010... - 时间戳 (52 bits) = 2025-10-17T...
-// 000001 - 工作节点 ID (6 bits) = 1
-// 101010 - 序列号 (6 bits) = 42
+// 0000000000011010... - Timestamp (52 bits) = 2025-10-17T...
+// 000001 - Worker ID (6 bits) = 1
+// 101010 - Sequence (6 bits) = 42
 ```
 
-## 使用示例
+## Examples
 
-### 自定义位分配
+### Custom Bit Allocation
 
 ```typescript
 import { GenidOptimized, GenidMethod } from '@cdlab996/genid'
@@ -142,81 +148,81 @@ const genid = new GenidOptimized({
   workerId: 1,
   method: GenidMethod.TRADITIONAL,
   baseTime: new Date('2024-01-01').valueOf(),
-  workerIdBitLength: 10, // 支持 1024 个节点
-  seqBitLength: 12,      // 每毫秒 4096 个 ID
+  workerIdBitLength: 10, // Support 1024 nodes
+  seqBitLength: 12,      // 4096 IDs per millisecond
   topOverCostCount: 5000,
 })
 ```
 
-### 验证外部 ID
+### Validating External IDs
 
 ```typescript
-// 验证从数据库或 API 获取的 ID
+// Validate IDs from a database or API
 const externalId = '123456789012345'
 if (genid.isValid(externalId)) {
   const info = genid.parse(externalId)
-  console.log('生成时间:', info.timestamp)
-  console.log('来自节点:', info.workerId)
+  console.log('Generated at:', info.timestamp)
+  console.log('From worker:', info.workerId)
 } else {
-  console.error('无效 ID')
+  console.error('Invalid ID')
 }
 ```
 
-### 性能监控
+### Performance Monitoring
 
 ```typescript
 setInterval(() => {
   const stats = genid.getStats()
-  console.log(`速率: ${stats.avgPerSecond} ID/s | 漂移: ${stats.overCostCount} | 回拨: ${stats.turnBackCount}`)
+  console.log(`Rate: ${stats.avgPerSecond} ID/s | Drift: ${stats.overCostCount} | Rollback: ${stats.turnBackCount}`)
 }, 10000)
 ```
 
-## 算法模式
+## Algorithm Modes
 
-| 模式              | 说明                                     | 适用场景             |
-| ----------------- | ---------------------------------------- | -------------------- |
-| **DRIFT**（默认） | 序列号耗尽时借用未来时间戳，避免等待     | 高频 ID 生成、高并发 |
-| **TRADITIONAL**   | 严格按时间戳递增，序列号耗尽等待下一毫秒 | 对时间顺序严格要求   |
+| Mode                | Description                                                        | Use Case                      |
+| ------------------- | ------------------------------------------------------------------ | ----------------------------- |
+| **DRIFT** (default) | Borrows future timestamps when sequence is exhausted; avoids waits | High-frequency ID generation  |
+| **TRADITIONAL**     | Strictly increasing timestamps; waits for next ms on exhaustion    | Strict time-ordering required |
 
-## 架构
+## Architecture
 
-### ID 结构（64-bit）
+### ID Structure (64-bit)
 
 ```
-|------------ 时间戳 ------------|-- 工作节点 ID --|-- 序列号 --|
-        42-52 bits                    1-15 bits        3-21 bits
+|------------ Timestamp ------------|-- Worker ID --|-- Sequence --|
+        42-52 bits                      1-15 bits       3-21 bits
 ```
 
-默认配置：时间戳 52 bits（约 139 年）| 节点 ID 6 bits（64 个节点）| 序列号 6 bits（每毫秒 59 个 ID）
+Default: Timestamp 52 bits (~139 years) | Worker ID 6 bits (64 nodes) | Sequence 6 bits (59 IDs/ms)
 
-序列号 `0-4` 保留用于时钟回拨，正常使用从 `5` 开始。
+Sequence values `0-4` are reserved for clock rollback; normal generation starts at `5`.
 
-### 核心流程
+### Core Flow
 
 ```mermaid
 graph TB
-    A[开始生成 ID] --> B{是否处于漂移状态?}
+    A[Start ID Generation] --> B{In drift mode?}
 
-    B -->|否| C[正常路径]
-    B -->|是| D[漂移路径]
+    B -->|No| C[Normal Path]
+    B -->|Yes| D[Drift Path]
 
-    C --> E{检测时钟}
-    E -->|时钟回拨| F[使用保留序列号 0-4]
-    E -->|时间前进| G[重置序列号]
-    E -->|同一毫秒| H{序列号是否溢出?}
+    C --> E{Check Clock}
+    E -->|Clock Rollback| F[Use Reserved Sequence 0-4]
+    E -->|Time Advanced| G[Reset Sequence]
+    E -->|Same Millisecond| H{Sequence Exhausted?}
 
-    H -->|否| I[序列号+1 正常生成]
-    H -->|是| J[进入漂移状态 时间戳+1]
+    H -->|No| I[Increment Sequence]
+    H -->|Yes| J[Enter Drift Mode, Timestamp+1]
 
-    D --> K{检测时间}
-    K -->|时间追上| L[退出漂移 恢复正常]
-    K -->|超过最大漂移| M[等待下一毫秒 退出漂移]
-    K -->|继续漂移| N{序列号是否溢出?}
+    D --> K{Check Time}
+    K -->|Time Caught Up| L[Exit Drift, Resume Normal]
+    K -->|Exceeded Max Drift| M[Wait for Next ms, Exit Drift]
+    K -->|Continue Drift| N{Sequence Exhausted?}
 
-    N -->|否| O[使用当前序列号]
-    N -->|是| P[时间戳+1 重置序列号]
+    N -->|No| O[Use Current Sequence]
+    N -->|Yes| P[Timestamp+1, Reset Sequence]
 
-    F --> Q[计算 ID]
+    F --> Q[Assemble ID]
     G --> Q
     I --> Q
     J --> Q
@@ -225,26 +231,146 @@ graph TB
     O --> Q
     P --> Q
 
-    Q --> R[更新统计]
-    R --> S[返回 ID]
+    Q --> R[Update Statistics]
+    R --> S[Return ID]
 ```
 
-## 注意事项
+## Performance
 
-- 每个 Worker/进程必须使用**不同的 workerId**
-- 实例**非线程安全**，不要跨线程共享
-- `workerIdBitLength + seqBitLength` 不能超过 22
-- 序列号 0-4 保留用于时钟回拨处理
-- 超出 JavaScript 安全整数范围（2^53-1）时，使用 `nextBigId()` 或 `nextId()`（自动返回 BigInt）
+Throughput is determined by the number of available sequence slots per millisecond. Increasing `seqBitLength` scales linearly:
 
-## 性能
+|  seqBitLength   | Slots/ms |          Throughput |
+| :-------------: | -------: | ------------------: |
+|        3        |        3 |      ~3,000 IDs/sec |
+|        4        |       11 |     ~11,000 IDs/sec |
+| **6** (default) |   **59** | **~58,000 IDs/sec** |
+|        8        |      251 |    ~247,000 IDs/sec |
+|       10        |    1,019 |  ~1,000,000 IDs/sec |
+|       14        |   16,379 |  ~4,500,000 IDs/sec |
 
-| 指标                       | 数值          |
-| -------------------------- | ------------- |
-| 单实例吞吐量               | > 50,000 ID/s |
-| 每毫秒生成量（默认配置）   | 59 个         |
-| 最大节点数（默认配置）     | 64 个         |
-| 时间戳可用时长（默认配置） | ~139 年       |
+> Measured on Node.js v22 (x64). Actual results vary by environment.
+> Run `pnpm run benchmark` to probe your own machine.
+
+| Metric                    | Value (default config) |
+| ------------------------- | ---------------------: |
+| Max worker nodes          |                     64 |
+| Timestamp lifespan        |             ~139 years |
+| P99 latency (single call) |                  < 1µs |
+
+## Benchmark
+
+A built-in probe script measures the actual capability of the current environment:
+
+```bash
+pnpm run benchmark
+```
+
+It reports:
+
+1. **Single-call throughput** — peak `nextId()` IDs/sec
+2. **Batch throughput** — `nextBatch()` across different batch sizes
+3. **Latency percentiles** — P50 / P95 / P99 / P99.9 / Max
+4. **Algorithm comparison** — DRIFT vs TRADITIONAL side-by-side
+5. **Throughput by seqBitLength** — how bit allocation affects throughput
+6. **Memory footprint** — heap delta after 1M generations
+7. **Recommended thresholds** — suggested safe values for test assertions (60% of peak)
+
+<details>
+<summary>Example output</summary>
+
+```bash
+station :: /app/projects/genid ‹main*› » pnpm run benchmark
+
+> @cdlab996/genid@1.4.0 benchmark /app/projects/genid
+> npx tsx scripts/benchmark.ts
+
+============================================================
+  GenidOptimized — Environment Capability Probe
+  Node v22.22.0 | linux x64
+  Date: 2026-04-01T08:41:07.669Z
+============================================================
+
+────────────────────────────────────────────────────────────
+  1. Single-call throughput (nextId)
+────────────────────────────────────────────────────────────
+  Duration:   3001ms
+  Generated:  226,073
+  Throughput: 75,332 IDs/sec
+
+────────────────────────────────────────────────────────────
+  2. Batch throughput (nextBatch)
+────────────────────────────────────────────────────────────
+  batch=    100 × 5000  =>        61,665 IDs/sec
+  batch=  1,000 ×  500  =>        61,577 IDs/sec
+  batch= 10,000 ×   50  =>        61,716 IDs/sec
+  batch=100,000 ×    5  =>        61,644 IDs/sec
+
+────────────────────────────────────────────────────────────
+  3. Single-call latency percentiles
+────────────────────────────────────────────────────────────
+  Samples: 100,000
+  Avg:     0µs
+  P50:     0µs
+  P95:     1µs
+  P99:     1µs
+  P99.9:   1µs
+  Max:     364µs
+
+────────────────────────────────────────────────────────────
+  4. Algorithm comparison (DRIFT vs TRADITIONAL)
+────────────────────────────────────────────────────────────
+  DRIFT              58,296 IDs/sec   drift=1
+  TRADITIONAL        59,000 IDs/sec   drift=0
+
+────────────────────────────────────────────────────────────
+  5. Throughput by sequence bit length
+────────────────────────────────────────────────────────────
+  seqBits= 3  maxSeq=    7  =>         2,986 IDs/sec   drift=1
+  seqBits= 4  maxSeq=   15  =>        10,884 IDs/sec   drift=1
+  seqBits= 6  maxSeq=   63  =>        58,240 IDs/sec   drift=1
+  seqBits= 8  maxSeq=  255  =>       247,804 IDs/sec   drift=1
+  seqBits=10  maxSeq= 1023  =>     1,008,930 IDs/sec   drift=1
+  seqBits=14  maxSeq=16383  =>     4,130,701 IDs/sec   drift=0
+
+────────────────────────────────────────────────────────────
+  6. Memory footprint
+────────────────────────────────────────────────────────────
+  Generated:    1,000,000 IDs (not stored)
+  Heap delta:   -6.27 MB
+  Note: Run with --expose-gc for accurate GC-forced measurement
+
+────────────────────────────────────────────────────────────
+  Summary — Recommended test thresholds
+────────────────────────────────────────────────────────────
+  Peak single-call:        75,332 IDs/sec
+  Peak batch:              61,716 IDs/sec
+  Suggested min threshold: 45,199 IDs/sec  (60% of peak)
+  Suggested batch threshold: 37,029 IDs/sec  (60% of peak)
+  Suggested P99 cap:       2µs  (3× measured P99)
+```
+
+</details>
+
+## Development
+
+```bash
+pnpm install          # Install dependencies
+pnpm run build        # Build (ESM + CJS)
+pnpm run dev          # Watch mode
+pnpm run test         # Run tests
+pnpm run benchmark    # Run environment capability probe
+pnpm run typecheck    # Type check
+pnpm run lint         # Lint (Biome)
+pnpm run format       # Format (Biome)
+```
+
+## Notes
+
+- Each worker/process must use a **unique workerId**
+- Instances are **not thread-safe** — do not share across threads
+- `workerIdBitLength + seqBitLength` must not exceed 22
+- Sequence values 0-4 are reserved for clock-rollback handling
+- When IDs exceed the JavaScript safe integer range (2^53-1), use `nextBigId()` or `nextId()` (auto-returns BigInt)
 
 ## License
 
