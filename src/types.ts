@@ -69,6 +69,14 @@ export interface StatsResult {
   currentState: 'OVER_COST' | 'NORMAL'
 }
 
+/** isValid 校验选项 */
+export interface ValidateOptions {
+  /** 为 true 时要求 workerId 匹配当前实例（默认：false） */
+  strictWorkerId?: boolean
+  /** ID 的生成时间不得早于此时间戳/毫秒（默认：baseTime） */
+  afterTime?: number
+}
+
 /** 配置信息 */
 export interface ConfigResult {
   method: 'DRIFT' | 'TRADITIONAL'

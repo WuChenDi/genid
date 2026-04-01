@@ -6,6 +6,7 @@ import type {
   ParseResult,
   Stats,
   StatsResult,
+  ValidateOptions,
 } from './types'
 import { GenidMethod } from './types'
 
@@ -369,13 +370,23 @@ export class GenidOptimized {
 
   /**
    * 验证 ID 是否为当前配置下合法的 Snowflake ID
-   * @param strictWorkerId - 为 true 时要求 workerId 匹配当前实例
+   *
+   * @param options - 校验选项，或传 boolean 表示 strictWorkerId（向后兼容）
+   *
+   * @example
+   * genid.isValid(id)                            // 宽松校验
+   * genid.isValid(id, true)                      // 要求 workerId 匹配
+   * genid.isValid(id, { strictWorkerId: true })  // 同上
+   * genid.isValid(id, { afterTime: startupTime }) // 要求 ID 生成时间晚于 startupTime
    */
   isValid(
     id: number | bigint | string,
-    strictWorkerId: boolean = false,
+    options: boolean | ValidateOptions = false,
   ): boolean {
     try {
+      const opts: ValidateOptions =
+        typeof options === 'boolean' ? { strictWorkerId: options } : options
+
       const idBigInt = BigInt(id)
 
       if (idBigInt < 0n) return false
@@ -396,12 +407,17 @@ export class GenidOptimized {
       const currentTime = BigInt(Date.now())
       if (timestamp > currentTime + 1000n) return false
 
+      // afterTime: ID 的生成时间不得早于指定时间
+      if (opts.afterTime != null && timestamp < BigInt(opts.afterTime)) {
+        return false
+      }
+
       const maxWorkerId = (1n << this.workerIdBitLength) - 1n
-      if (workerId < 0n || workerId > maxWorkerId) return false
-      if (strictWorkerId && workerId !== this.workerId) return false
+      if (workerId > maxWorkerId) return false
+      if (opts.strictWorkerId && workerId !== this.workerId) return false
 
       const maxSeq = (1n << this.seqBitLength) - 1n
-      if (sequence < 0n || sequence > maxSeq) return false
+      if (sequence > maxSeq) return false
 
       return true
     } catch {

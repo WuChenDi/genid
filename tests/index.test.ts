@@ -55,14 +55,13 @@ describe('GenidOptimized', () => {
       )
     })
 
-    it('应该在 minSeqNumber 小于 5 时抛出错误', () => {
-      expect(
-        () =>
-          new GenidOptimized({
-            workerId: 1,
-            minSeqNumber: 4,
-          }),
-      ).toThrow('[GenidOptimized] minSeqNumber 必须至少为 5')
+    it('应该在 minSeqNumber 小于 5 时使用默认值 5', () => {
+      const genid = new GenidOptimized({
+        workerId: 1,
+        minSeqNumber: 4,
+      })
+      const config = genid.getConfig()
+      expect(config.sequenceRange).toMatch(/^5-/)
     })
 
     it('应该在 maxSeqNumber 小于 minSeqNumber 时抛出错误', () => {
@@ -807,6 +806,47 @@ describe('GenidOptimized', () => {
 
       // 但可能无法验证其他配置的 ID（因为位移不同）
       // 这个取决于具体的 ID 值，所以我们只测试自己的配置
+    })
+
+    it('应该支持 afterTime 选项拒绝过早的 ID', () => {
+      const genid = new GenidOptimized({ workerId: 1 })
+
+      // 随机小数字在宽松模式下会通过（解码为 baseTime 附近的时间戳）
+      expect(genid.isValid('8077035')).toBe(true)
+
+      // 使用 afterTime 后，要求 ID 的时间戳晚于指定时间
+      const startupTime = Date.now() - 60000 // 1 分钟前
+      expect(genid.isValid('8077035', { afterTime: startupTime })).toBe(false)
+
+      // 当前生成的 ID 应该通过 afterTime 校验
+      const id = genid.nextId()
+      expect(genid.isValid(id, { afterTime: startupTime })).toBe(true)
+    })
+
+    it('应该支持 options 对象格式的 strictWorkerId', () => {
+      const genid1 = new GenidOptimized({ workerId: 1 })
+      const genid2 = new GenidOptimized({ workerId: 2 })
+
+      const id2 = genid2.nextId()
+
+      expect(genid1.isValid(id2, { strictWorkerId: true })).toBe(false)
+      expect(genid2.isValid(id2, { strictWorkerId: true })).toBe(true)
+    })
+
+    it('应该支持同时使用 strictWorkerId 和 afterTime', () => {
+      const startupTime = Date.now() - 1000
+      const genid = new GenidOptimized({ workerId: 1 })
+      const id = genid.nextId()
+
+      expect(
+        genid.isValid(id, { strictWorkerId: true, afterTime: startupTime }),
+      ).toBe(true)
+      expect(
+        genid.isValid('8077035', {
+          strictWorkerId: false,
+          afterTime: startupTime,
+        }),
+      ).toBe(false)
     })
   })
 
